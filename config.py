@@ -19,7 +19,8 @@ ALLOWED_CHAT_IDS: list[int] = [
 ]
 
 # Your personal Telegram user ID — for owner-only commands
-OWNER_USER_ID: int = int(os.getenv("OWNER_USER_ID") or "0")
+_owner_raw = os.getenv("OWNER_USER_ID", "").strip()
+OWNER_USER_ID: int = int(_owner_raw) if _owner_raw.lstrip("-").isdigit() else 0
 
 # ── Anthropic ──────────────────────────────────────────────────────────────
 

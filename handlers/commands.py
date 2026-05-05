@@ -120,6 +120,4 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             "Example:  <code>/log 6/12</code>",
             parse_mode="HTML",
         )
-    elif query.data == "menu_stats":
-        await query.delete_message()
-        await handle_stats(update, context)
+    elif query.data == "menu_
