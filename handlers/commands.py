@@ -41,10 +41,10 @@ async def cmd_log(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     if not match:
         keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📖 How to log a result", callback_data="log_help")]
+            [InlineKeyboardButton("How to log a result", callback_data="log_help")]
         ])
         await update.message.reply_text(
-            "📝 <b>Log a session result</b>\n\n"
+            "<b>Log a session result</b>\n\n"
             "Send the command with your result:\n"
             "<code>/log won/total</code>\n\n"
             "Example:  <code>/log 6/12</code>",
@@ -58,12 +58,12 @@ async def cmd_log(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     wipes = int(match.group(3)) if match.group(3) is not None else 0
 
     if total == 0:
-        await update.message.reply_text("⚠️ Total can't be zero.")
+        await update.message.reply_text("Total can't be zero.")
         return
 
     if won > total:
         await update.message.reply_text(
-            f"⚠️ Won ({won}) can't be greater than total ({total})."
+            f"Won ({won}) can't be greater than total ({total})."
         )
         return
 
@@ -75,11 +75,11 @@ async def cmd_log(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     wipes_line = f"\nServer wipes: <b>{wipes}</b>" if wipes > 0 else ""
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📊 View stats", callback_data="menu_stats")]
+        [InlineKeyboardButton("View stats", callback_data="menu_stats")]
     ])
 
     await update.message.reply_text(
-        f"✅ <b>Session saved!</b>\n"
+        f"<b>Session saved!</b>\n"
         f"Won <b>{won}</b> out of <b>{total}</b> ({win_rate}%)"
         f"{wipes_line}",
         parse_mode="HTML",
@@ -88,36 +88,38 @@ async def cmd_log(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def cmd_log_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handles the 'How to log a result' inline button."""
+    """Handles the How to log a result inline button."""
     query = update.callback_query
     await query.answer()
     await query.edit_message_text(
-        "📖 <b>How to log a result</b>\n\n"
+        "<b>How to log a result</b>\n\n"
         "<code>/log won/total</code>\n"
         "<code>/log won/total/wipes</code>\n\n"
-        "<code>/log 6/12</code>    — 6 wins out of 12 missions\n"
-        "<code>/log 6/12/1</code>  — same + 1 server wipe\n\n"
+        "<code>/log 6/12</code>    -- 6 wins out of 12 missions\n"
+        "<code>/log 6/12/1</code>  -- same + 1 server wipe\n\n"
         "Result is saved to Google Sheets and counted in <code>/stats</code>.",
         parse_mode="HTML",
     )
 
 
 async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """/stats — show aggregate stats from Google Sheets."""
+    """/stats -- show aggregate stats from Google Sheets."""
     await handle_stats(update, context)
 
 
 async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handles the 📝 Log result and 📊 Stats buttons from the mention menu."""
+    """Handles the Log result and Stats buttons from the mention menu."""
     query = update.callback_query
     await query.answer()
 
     if query.data == "menu_log":
         await query.edit_message_text(
-            "📝 <b>Log a session result</b>\n\n"
+            "<b>Log a session result</b>\n\n"
             "Send the command with your result:\n"
             "<code>/log won/total</code>\n\n"
             "Example:  <code>/log 6/12</code>",
             parse_mode="HTML",
         )
-    elif query.data == "menu_
+    elif query.data == "menu_stats":
+        await query.delete_message()
+        await handle_stats(update, context)
