@@ -1,0 +1,26 @@
+# Secrets — never commit these
+.env
+*.json
+huntstatbot.json
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Bot data (stats & message history stored locally)
+# On GitHub Actions these are committed back to the repo automatically
+# Uncomment the line below if you want to also exclude them locally
+# data/
