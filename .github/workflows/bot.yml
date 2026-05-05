@@ -1,0 +1,37 @@
+name: HuntStatClaudeBot
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"  # runs every 6 hours
+  workflow_dispatch:         # allows manual trigger from GitHub UI
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run bot
+        run: timeout 21300 python bot.py || true  # 5h55m = 21300s, then stops gracefully
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BOT_USERNAME: ${{ secrets.BOT_USERNAME }}
+          ALLOWED_CHAT_IDS: ${{ secrets.ALLOWED_CHAT_IDS }}
+          OWNER_USER_ID: ${{ secrets.OWNER_USER_ID }}
+          CLAUDE_MODEL: ${{ secrets.CLAUDE_MODEL }}
+          CLAUDE_MEMORY: ${{ secrets.CLAUDE_MEMORY }}
+          CONTEXT_MESSAGES: ${{ secrets.CONTEXT_MESSAGES }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
