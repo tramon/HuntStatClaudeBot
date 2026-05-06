@@ -14,7 +14,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from handlers.stats import handle_stats
-from utils.sheets import append_session
+from utils.sheets import SheetsError, append_session
 
 logger = logging.getLogger(__name__)
 
@@ -57,19 +57,29 @@ async def cmd_log(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     total = int(match.group(2))
     wipes = int(match.group(3)) if match.group(3) is not None else 0
 
+    if won == 0 and total == 0:
+        await update.message.reply_text("Pass like: '/log win/missions'")
+        return
+
     if total == 0:
-        await update.message.reply_text("Total can't be zero.")
+        await update.message.reply_text("Pass your: 'win/missions'")
         return
 
     if won > total:
         await update.message.reply_text(
-            f"Won ({won}) can't be greater than total ({total})."
+            f"Wins ({won}) can't be greater than missions ({total})."
         )
         return
 
     win_rate = round(won / total * 100)
 
-    append_session(won=won, total=total, wipes=wipes)
+    try:
+        append_session(won=won, total=total, wipes=wipes)
+    except SheetsError as e:
+        logger.error(f"Failed to save session: {e}")
+        await update.message.reply_text(f"Could not save session: {e}")
+        return
+
     logger.info(f"Session logged: {won}/{total}, wipes={wipes} by {_sender_name(update)}")
 
     wipes_line = f"\nServer wipes: <b>{wipes}</b>" if wipes > 0 else ""
@@ -123,3 +133,21 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     elif query.data == "menu_stats":
         await query.delete_message()
         await handle_stats(update, context)
+
+
+async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/help — show all available commands."""
+    await update.message.reply_text(
+        "<b>HuntStatBot commands</b>\n\n"
+        "<code>/log win/missions</code>\n"
+        "Log a session result.\n"
+        "Example: <code>/log 6/12</code>\n\n"
+        "<code>/log win/missions/wipes</code>\n"
+        "Log with server wipes.\n"
+        "Example: <code>/log 6/12/1</code>\n\n"
+        "<code>/stats</code>\n"
+        "Show overall hunt statistics.\n\n"
+        "<code>@HuntStatClaudeBot question</code>\n"
+        "Ask Claude anything.",
+        parse_mode="HTML",
+    )

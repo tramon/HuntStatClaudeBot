@@ -5,8 +5,8 @@ Sheet name: Sessions
 Columns:    Date | Won | Total | Win % | Server Wipes
 
 Credentials priority:
-  1. GOOGLE_CREDENTIALS_JSON env var (JSON string) — used on Render/CI
-  2. GOOGLE_CREDENTIALS_FILE path — used locally
+  1. GOOGLE_CREDENTIALS_JSON env var (JSON string) -- used on Render/CI
+  2. GOOGLE_CREDENTIALS_FILE path -- used locally
 """
 
 import json
@@ -27,30 +27,53 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive",
 ]
 
-_client: gspread.Client | None = None
+_client = None
 
 
-def _get_client() -> gspread.Client:
+class SheetsError(Exception):
+    """Raised when a Google Sheets operation fails."""
+    pass
+
+
+def _get_client():
     global _client
     if _client is not None:
         return _client
 
-    if config.GOOGLE_CREDENTIALS_JSON:
-        info = json.loads(config.GOOGLE_CREDENTIALS_JSON)
-        creds = Credentials.from_service_account_info(info, scopes=SCOPES)
-    else:
-        creds = Credentials.from_service_account_file(
-            config.GOOGLE_CREDENTIALS_FILE, scopes=SCOPES
-        )
+    try:
+        if config.GOOGLE_CREDENTIALS_JSON:
+            info = json.loads(config.GOOGLE_CREDENTIALS_JSON)
+            creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+        else:
+            creds = Credentials.from_service_account_file(
+                config.GOOGLE_CREDENTIALS_FILE, scopes=SCOPES
+            )
+        _client = gspread.authorize(creds)
+        return _client
+    except FileNotFoundError:
+        logger.error(f"Credentials file not found: {config.GOOGLE_CREDENTIALS_FILE}")
+        raise SheetsError("Credentials file not found. Check GOOGLE_CREDENTIALS_FILE.")
+    except (json.JSONDecodeError, KeyError) as e:
+        logger.error(f"Invalid credentials JSON: {e}")
+        raise SheetsError("Credentials JSON is invalid. Check GOOGLE_CREDENTIALS_JSON.")
+    except Exception as e:
+        logger.error(f"Failed to authenticate with Google: {e}")
+        raise SheetsError(f"Google auth failed: {e}")
 
-    _client = gspread.authorize(creds)
-    return _client
 
-
-def _get_sheet() -> gspread.Worksheet:
+def _get_sheet():
     """Open the spreadsheet and return the Sessions worksheet."""
-    client = _get_client()
-    spreadsheet = client.open_by_key(config.GOOGLE_SHEET_ID)
+    try:
+        client = _get_client()
+        spreadsheet = client.open_by_key(config.GOOGLE_SHEET_ID)
+    except SheetsError:
+        raise
+    except gspread.exceptions.APIError as e:
+        logger.error(f"Sheets API error: {e}")
+        raise SheetsError("Cannot access Google Sheet. Check GOOGLE_SHEET_ID and sharing.")
+    except Exception as e:
+        logger.error(f"Error opening spreadsheet: {e}")
+        raise SheetsError(f"Cannot open spreadsheet: {e}")
 
     try:
         ws = spreadsheet.worksheet(SHEET_NAME)
@@ -62,28 +85,37 @@ def _get_sheet() -> gspread.Worksheet:
     return ws
 
 
-# ── Public API ─────────────────────────────────────────────────────────────
-
-def append_session(won: int, total: int, wipes: int = 0) -> None:
+def append_session(won, total, wipes=0):
     """Append a new session row to Google Sheets."""
-    ws = _get_sheet()
-    win_pct = round(won / total * 100) if total > 0 else 0
-    today = date.today().isoformat()
+    try:
+        ws = _get_sheet()
+        win_pct = round(won / total * 100) if total > 0 else 0
+        today = date.today().isoformat()
+        ws.append_row([today, won, total, win_pct, wipes])
+        logger.info(f"Session saved: {won}/{total} ({win_pct}%), wipes={wipes} on {today}")
+    except SheetsError:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to save session: {e}")
+        raise SheetsError(f"Failed to save session: {e}")
 
-    ws.append_row([today, won, total, win_pct, wipes])
-    logger.info(f"Session saved: {won}/{total} ({win_pct}%), wipes={wipes} on {today}")
 
-
-def get_all_sessions() -> list[dict]:
+def get_all_sessions():
     """Return all sessions as a list of dicts."""
-    ws = _get_sheet()
-    rows = ws.get_all_values()
+    try:
+        ws = _get_sheet()
+        rows = ws.get_all_values()
+    except SheetsError:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to read from Sheets: {e}")
+        raise SheetsError(f"Failed to read data: {e}")
 
     if len(rows) <= 1:
         return []
 
     sessions = []
-    for row in rows[1:]:  # skip header
+    for row in rows[1:]:
         if len(row) < 3:
             continue
         date_val = row[0]

@@ -1,5 +1,5 @@
 """
-Stats handler — reads from Google Sheets and returns aggregate summary.
+Stats handler -- reads from Google Sheets and returns aggregate summary.
 """
 
 import logging
@@ -7,19 +7,27 @@ import logging
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from utils.sheets import get_all_sessions
+from utils.sheets import SheetsError, get_all_sessions
 
 logger = logging.getLogger(__name__)
 
 
 async def handle_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    sessions = get_all_sessions()
+    try:
+        sessions = get_all_sessions()
+    except SheetsError as e:
+        logger.error(f"Stats fetch failed: {e}")
+        await context.bot.send_message(
+            update.effective_chat.id,
+            f"Could not load stats: {e}",
+            parse_mode="HTML",
+        )
+        return
 
     if not sessions:
         await context.bot.send_message(
             update.effective_chat.id,
-            "📊 No stats recorded yet.\n\n"
-            "Use <code>/log 6/12</code> to log your first session.",
+            "No stats recorded yet.\n\nUse <code>/log 6/12</code> to log your first session.",
             parse_mode="HTML",
         )
         return
@@ -34,19 +42,19 @@ async def handle_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     last = sessions[-1]
 
-    reply = (
-        f"📊 <b>Hunt Stats</b>\n"
-        f"━━━━━━━━━━━━━━━\n"
-        f"Sessions:   {session_count}\n"
-        f"Missions:   {total_missions}\n"
-        f"Wins:       {total_won}\n"
-        f"━━━━━━━━━━━━━━━\n"
-        f"<b>Win rate:  {overall_pct}%</b>\n"
-        f"Server wipes:  <b>{total_wipes} ({wipes_pct}%)</b>\n"
-        f"━━━━━━━━━━━━━━━\n"
-        f"Last session ({last['date']}):  "
-        f"{last['won']}/{last['total']} = {last['win_pct']}%"
-    )
+    lines = [
+        "<b>Hunt Stats</b>",
+        "---------------",
+        f"Sessions:     {session_count}",
+        f"Missions:     {total_missions}",
+        f"Wins:         {total_won}",
+        "---------------",
+        f"<b>Win rate:  {overall_pct}%</b>",
+        f"Server wipes: <b>{total_wipes} ({wipes_pct}%)</b>",
+        "---------------",
+        f"Last session ({last['date']}):  {last['won']}/{last['total']} = {last['win_pct']}%",
+    ]
+    reply = "\n".join(lines)
 
     await context.bot.send_message(
         update.effective_chat.id,
