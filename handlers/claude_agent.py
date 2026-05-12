@@ -90,16 +90,16 @@ async def handle_claude(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         logger.error(f"Anthropic API error {e.status_code}: {e}")
         err = str(e).lower()
         if e.status_code == 401 or "authentication" in err or "invalid x-api-key" in err:
-            logger.error("не той ключ(API). я десь загубив ключі.")
+            logger.error("Wrong API key")
             return
         elif e.status_code in (402, 529) or "credit" in err or "billing" in err:
             reply = _BILLING_REPLY
         elif e.status_code == 429:
-            reply = "Too many requests. Try again in a minute."
+            reply = "Забагато питань. Почекай."
         else:
-            reply = f"API error ({e.status_code}). Try again later."
+            reply = f"У мене тут помилка API: ({e.status_code})."
     except anthropic.APIError as e:
-        logger.error(f"Anthropic API error: {e}")
+        logger.error(f"У мене тут помилка Anthropic API: {e}")
         if "authentication" in str(e).lower() or "invalid x-api-key" in str(e).lower():
             return
         reply = "Cannot reach the API. Try again in a moment."
