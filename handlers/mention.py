@@ -5,9 +5,9 @@ Group chat: acts only when bot is @mentioned.
 Private chat: acts on every message.
 
 Routes:
-  "stats" / "stat"  -> show stats
-  mention alone     -> show menu buttons
-  anything else     -> ask Claude
+  stats keywords  -> show stats directly
+  mention alone   -> show menu buttons
+  anything else   -> ask Claude
 """
 
 import logging
@@ -22,12 +22,26 @@ from utils.history import save_message
 
 logger = logging.getLogger(__name__)
 
-_STATS_KEYWORDS = {"stats", "stat", "statistics"}
+# Any of these words trigger stats directly, without going through Claude
+_STATS_KEYWORDS = {
+    # English
+    "stats", "stat", "statistics", "score", "scores", "result", "results",
+    "winrate", "wins", "missions",
+    # Ukrainian
+    "стат", "стата", "статистика", "статистику", "результат", "результати",
+    "рахунок", "перемоги", "вінрейт",
+}
 
 
 def _sender_name(update: Update) -> str:
     user = update.message.from_user
     return user.username or user.first_name or f"user_{user.id}"
+
+
+def _has_stats_intent(text: str) -> bool:
+    """Return True if the message is asking for stats."""
+    lower = text.lower()
+    return any(kw in lower for kw in _STATS_KEYWORDS)
 
 
 async def handle_mention(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -53,16 +67,17 @@ async def handle_mention(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if bot_tag.lower() not in text.lower():
             return
 
-    # Build word set without the bot mention itself
+    # Strip bot mention to get the actual message content
     bot_tag = f"@{config.BOT_USERNAME}"
-    words = {w.lstrip("/") for w in text.lower().split()}
-    words.discard(bot_tag.lower())
+    clean = text.lower().replace(bot_tag.lower(), "").strip()
 
-    if words & _STATS_KEYWORDS:
+    # Stats request -- show stats directly, no Claude needed
+    if _has_stats_intent(clean):
         logger.info(f"Stats requested by {_sender_name(update)} in chat {chat_id}")
         await handle_stats(update, context)
 
-    elif not words:
+    # Mentioned with no content -- show menu
+    elif not clean:
         keyboard = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("Log result", callback_data="menu_log"),
@@ -74,6 +89,7 @@ async def handle_mention(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             reply_markup=keyboard,
         )
 
+    # Everything else -- ask Claude
     else:
         logger.info(f"Claude invoked by {_sender_name(update)} in chat {chat_id}")
         await handle_claude(update, context)

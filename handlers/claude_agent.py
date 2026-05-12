@@ -49,8 +49,11 @@ SYSTEM_PROMPT = (
     "- /log win/missions (e.g. /log 6/12)\n"
     "- /log win/missions/wipes (e.g. /log 6/12/1)\n"
     "- /stats -- overall hunt statistics\n"
-    "- /help -- all commands\n"
-    "If someone asks about stats, tell them to use /stats.\n\n"
+    "- /help -- all commands\n\n"
+    "Rules:\n"
+    "- Stats are shown automatically when someone asks -- you do NOT need to tell them to use /stats.\n"
+    "- NEVER log sessions yourself. Only the /log command does that. If someone shares a result in chat,\n"
+    "  do NOT call /log or suggest logging on their behalf. If they want to log it, they use /log.\n\n"
     "Keep replies short. You are The Priest. You just happen to run on code."
 )
 
@@ -105,6 +108,6 @@ async def handle_claude(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         reply = "Cannot reach the API. Try again in a moment."
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
-        reply = "Something went wrong. Please try again."
+        reply = "Щось пішло не так. Спробуй ще раз."
 
     await message.reply_text(reply)
