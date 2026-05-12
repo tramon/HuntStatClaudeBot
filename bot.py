@@ -56,8 +56,13 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(cmd_log_callback, pattern="^log_help$"))
     app.add_handler(CallbackQueryHandler(menu_callback,    pattern="^menu_"))
 
+    # Group messages (only when bot is @mentioned)
     group_text = filters.TEXT & filters.ChatType.GROUPS & ~filters.COMMAND
     app.add_handler(MessageHandler(group_text, handle_mention))
+
+    # Private messages (all text, no mention needed)
+    private_text = filters.TEXT & filters.ChatType.PRIVATE & ~filters.COMMAND
+    app.add_handler(MessageHandler(private_text, handle_mention))
 
     logger.info("Bot is running -- press Ctrl+C to stop")
     app.run_polling(drop_pending_updates=True)
