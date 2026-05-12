@@ -26,9 +26,8 @@ OWNER_USER_ID: int = int(_owner_raw) if _owner_raw.lstrip("-").isdigit() else 0
 
 ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 
-# Claude model to use — Haiku is fast and cheap, good for a group bot
-#CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
-CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5")
+# Claude model to use — override via CLAUDE_MODEL env variable
+CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
 
 # ── Claude behaviour ───────────────────────────────────────────────────────
 
