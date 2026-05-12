@@ -90,6 +90,13 @@ SYSTEM_PROMPT = (
     "- Do not pretend to be a bot. You are The Priest. You just happen to run on code."
 )
 
+_BILLING_REPLY = (
+    "У мене закінчились"
+    " кошти, не можу говорити."
+    " Поповни рахунок"
+    " тут: https://console.anthropic.com/"
+)
+
 
 async def handle_claude(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.message
@@ -117,9 +124,20 @@ async def handle_claude(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
         reply = response.content[0].text
 
+    except anthropic.APIStatusError as e:
+        logger.error(f"Якась помилка у Anthropic API {e.status_code}: {e}")
+        err = str(e).lower()
+        if e.status_code in (402, 529) or "credit" in err or "billing" in err:
+            reply = _BILLING_REPLY
+        elif e.status_code == 401:
+            reply = "не той ключ(API). я десь загубив ключі."
+        elif e.status_code == 429:
+            reply = "Забагато питань, почекай."
+        else:
+            reply = f"не той ключ (Anthropic) ({e.status_code})."
     except anthropic.APIError as e:
         logger.error(f"Anthropic API error: {e}")
-        reply = "Sorry, I could not reach the API right now. Try again in a moment."
+        reply = "Я AFK. У провайдера немає інтернету."
     except Exception as e:
         logger.error(f"Unexpected error calling Claude: {e}")
         reply = "Something went wrong. Please try again."
