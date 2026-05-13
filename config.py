@@ -38,6 +38,12 @@ CLAUDE_MEMORY: bool = os.getenv("CLAUDE_MEMORY", "false").lower() == "true"
 # How many recent messages to pass to Claude when CLAUDE_MEMORY=true
 CONTEXT_MESSAGES: int = int(os.getenv("CONTEXT_MESSAGES", "15"))
 
+# ── Search ────────────────────────────────────────────────────────────────
+
+# Tavily API key for web search tool (https://tavily.com)
+# Leave empty to disable search entirely
+TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
+
 # ── Google Sheets ──────────────────────────────────────────────────────────
 
 # ID of the Google Sheet (from the URL)

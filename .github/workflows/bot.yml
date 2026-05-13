@@ -44,3 +44,4 @@ jobs:
           CONTEXT_MESSAGES: ${{ secrets.CONTEXT_MESSAGES }}
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}

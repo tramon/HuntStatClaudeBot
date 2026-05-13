@@ -1,5 +1,8 @@
 """
 Claude agent -- answers questions as "The Priest", a Hunt: Showdown veteran.
+
+Supports web_search tool: Claude decides autonomously when to search.
+Set TAVILY_API_KEY to enable. Leave empty to disable silently.
 """
 
 import logging
@@ -72,6 +75,30 @@ _BILLING_REPLY = (
     " \u0440\u0430\u0445\u0443\u043d\u043e\u043a: https://console.anthropic.com/"
 )
 
+# Tool definition sent to Claude
+_SEARCH_TOOL = {
+    "name": "web_search",
+    "description": (
+        "Search the web for current information. Use when asked about recent events, "
+        "news, prices, patch notes, or anything that may have changed recently."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "The search query.",
+            }
+        },
+        "required": ["query"],
+    },
+}
+
+
+def _build_tools() -> list:
+    """Return tools list if search is enabled, else empty list."""
+    return [_SEARCH_TOOL] if config.TAVILY_API_KEY else []
+
 
 async def handle_claude(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.message
@@ -93,14 +120,11 @@ async def handle_claude(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     else:
         system = SYSTEM_PROMPT
 
+    messages = [{"role": "user", "content": current}]
+    tools = _build_tools()
+
     try:
-        response = _get_client().messages.create(
-            model=config.CLAUDE_MODEL,
-            max_tokens=1024,
-            system=system,
-            messages=[{"role": "user", "content": current}],
-        )
-        reply = response.content[0].text
+        reply = await _run_agent_loop(system, messages, tools)
 
     except anthropic.APIStatusError as e:
         logger.error(f"Anthropic API error {e.status_code}: {e}")
@@ -123,3 +147,61 @@ async def handle_claude(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         reply = "Something went wrong. Please try again."
 
     await message.reply_text(reply)
+
+
+async def _run_agent_loop(system: str, messages: list, tools: list) -> str:
+    """
+    Run the Claude tool-use loop.
+
+    1. Call Claude.
+    2. If stop_reason == "tool_use" -- execute each requested tool, append results.
+    3. Call Claude again with the results.
+    4. Return the final text reply.
+
+    Max 3 tool rounds to avoid infinite loops.
+    """
+    from utils.search import web_search
+
+    client = _get_client()
+    kwargs = dict(
+        model=config.CLAUDE_MODEL,
+        max_tokens=1024,
+        system=system,
+        messages=messages,
+    )
+    if tools:
+        kwargs["tools"] = tools
+
+    for _round in range(3):
+        response = client.messages.create(**kwargs)
+
+        if response.stop_reason != "tool_use":
+            # Regular text reply -- done
+            for block in response.content:
+                if hasattr(block, "text"):
+                    return block.text
+            return ""
+
+        # --- tool_use: execute each tool call ---
+        tool_results = []
+        for block in response.content:
+            if block.type != "tool_use":
+                continue
+            if block.name == "web_search":
+                query = block.input.get("query", "")
+                logger.info(f"Web search: {query!r}")
+                result = web_search(query)
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": result or "No results.",
+                })
+
+        # Append assistant turn + tool results, then loop
+        kwargs["messages"] = kwargs["messages"] + [
+            {"role": "assistant", "content": response.content},
+            {"role": "user",      "content": tool_results},
+        ]
+
+    # Fallback if loop exhausted
+    return "Could not complete search. Try again."
