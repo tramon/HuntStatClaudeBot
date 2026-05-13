@@ -1,0 +1,59 @@
+# Knowledge Base Index
+# Щоб додати нову тему:
+#   1. Поклади .md файл у папку knowledge/
+#   2. Додай запис нижче з назвою файлу і ключовими словами
+#   3. Перезапусти бота (git push → GitHub Actions)
+
+- file: hunt_showdown_1896_traits.md
+  keywords:
+    - trait
+    - traits
+    - perk
+    - perks
+    - build
+    - tier list
+    - upgrade point
+    - synergy
+    - трейт
+    - трейти
+    - перк
+    - перки
+    - білд
+    - синергі
+    - тир
+    - catalyst
+    - packmule
+    - physician
+    - doctor
+    - greyhound
+    - levering
+    - fanning
+    - kiteskin
+
+- file: hunt_showdown_1896_weapons.md
+  keywords:
+    - weapon
+    - weapons
+    - gun
+    - rifle
+    - pistol
+    - shotgun
+    - crossbow
+    - ammo
+    - caliber
+    - зброя
+    - гвинтівка
+    - пістолет
+    - дробовик
+    - набої
+    - калібр
+    - winfield
+    - lebel
+    - mosin
+    - romero
+    - sparks
+    - vetterli
+    - springfield
+    - nagant
+    - bornheim
+    - dolch
