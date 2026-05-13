@@ -57,3 +57,88 @@
     - nagant
     - bornheim
     - dolch
+    - пушка
+    - набої
+    - краг
+    - лебель
+    - карбайн
+    - офісер
+    - нью армі
+    - дрілінг
+    - сентеніел
+    - сені
+    - шорті
+    - авто-4
+    - авто4
+    - шотган
+
+
+- file: hunt_showdown_1896_compounds.md
+  keywords:
+    - compound
+    - compounds
+    - map
+    - maps
+    - location
+    - locations
+    - stillwater
+    - bayou
+    - desalle
+    - lawson
+    - mammon
+    - компаунд
+    - компаунди
+    - карта
+    - карти
+    - локація
+    - локації
+    - spawn
+    - boss spawn
+    - extract
+    - extraction
+    - кампаунд
+    - карта
+    - мапа
+    - мапі
+    - карті
+    - десало
+    - пітчінг
+    - форт
+    - болден
+    - кармік
+    - лоусон
+    - хемлок
+    - грізлі
+
+- file: hunt_showdown_1896_mobs.md
+  keywords:
+    - mob
+    - mobs
+    - enemy
+    - enemies
+    - grunt
+    - hive
+    - armored
+    - meathead
+    - immolator
+    - hellhound
+    - water devil
+    - fetid
+    - scrapbeak
+    - mob spawn
+    - моб
+    - моби
+    - ворог
+    - вороги
+    - грунт
+    - арморед
+    - іммолейтор
+    - імолейтор
+    - демон
+    - собака
+    - стерва
+    - обом
+    - хайв
+    - npc
+    - нпс
+    - нпц
