@@ -154,11 +154,10 @@ async def _run_agent_loop(system: str, messages: list, tools: list) -> str:
     Run the Claude tool-use loop.
 
     1. Call Claude.
-    2. If stop_reason == "tool_use" -- execute each requested tool, append results.
+    2. If stop_reason == tool_use -- execute each requested tool, append results.
     3. Call Claude again with the results.
-    4. Return the final text reply.
-
-    Max 3 tool rounds to avoid infinite loops.
+    4. On the last allowed round, remove tools to force a text answer.
+    5. Return the final text reply.
     """
     from utils.search import web_search
 
@@ -172,17 +171,21 @@ async def _run_agent_loop(system: str, messages: list, tools: list) -> str:
     if tools:
         kwargs["tools"] = tools
 
-    for _round in range(3):
+    max_rounds = 10
+    for _round in range(max_rounds):
+        # Last round: remove tools so Claude is forced to answer with what it has
+        if _round == max_rounds - 1:
+            kwargs.pop("tools", None)
+
         response = client.messages.create(**kwargs)
 
         if response.stop_reason != "tool_use":
-            # Regular text reply -- done
             for block in response.content:
                 if hasattr(block, "text"):
                     return block.text
             return ""
 
-        # --- tool_use: execute each tool call ---
+        # Execute tool calls
         tool_results = []
         for block in response.content:
             if block.type != "tool_use":
@@ -197,11 +200,9 @@ async def _run_agent_loop(system: str, messages: list, tools: list) -> str:
                     "content": result or "No results.",
                 })
 
-        # Append assistant turn + tool results, then loop
         kwargs["messages"] = kwargs["messages"] + [
             {"role": "assistant", "content": response.content},
-            {"role": "user",      "content": tool_results},
+            {"role": "user", "content": tool_results},
         ]
 
-    # Fallback if loop exhausted
-    return "Could not complete search. Try again."
+    return ""
