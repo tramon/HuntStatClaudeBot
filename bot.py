@@ -11,7 +11,7 @@ from telegram.ext import Application, CallbackQueryHandler, ChatMemberHandler
 from telegram.ext import CommandHandler, MessageHandler, filters
 
 import config
-from handlers.commands import cmd_log, cmd_stats, cmd_log_callback, menu_callback, cmd_help
+from handlers.commands import cmd_log, cmd_stats, cmd_log_callback, menu_callback, cmd_help, cmd_doc
 from handlers.mention import handle_mention
 from handlers.security import handle_new_chat_member
 
@@ -29,6 +29,7 @@ async def post_init(app: Application) -> None:
     await app.bot.set_my_commands([
         BotCommand("log",   "Log a session result  (e.g. /log 6/12)"),
         BotCommand("stats", "Show overall hunt stats"),
+        BotCommand("doc",   "Link to the Google Sheet"),
         BotCommand("help",  "Show all available commands"),
     ])
     logger.info("Bot command menu registered")
@@ -51,6 +52,7 @@ def main() -> None:
 
     app.add_handler(CommandHandler("log",   cmd_log))
     app.add_handler(CommandHandler("stats", cmd_stats))
+    app.add_handler(CommandHandler("doc",   cmd_doc))
     app.add_handler(CommandHandler("help",  cmd_help))
 
     app.add_handler(CallbackQueryHandler(cmd_log_callback, pattern="^log_help$"))

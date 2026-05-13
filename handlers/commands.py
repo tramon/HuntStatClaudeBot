@@ -5,6 +5,7 @@ Slash command handlers — work independently of Claude.
 /log 6/12/1   — record a session result win / games / server wipes
 /log        — show usage instructions
 /stats      — show aggregate stats
+/doc        — link to the Google Sheet (allowed chats only)
 """
 
 import logging
@@ -13,6 +14,7 @@ import re
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
+import config
 from handlers.stats import handle_stats
 from utils.sheets import SheetsError, append_session
 
@@ -135,6 +137,24 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await handle_stats(update, context)
 
 
+async def cmd_doc(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/doc — send a link to the Google Sheet (allowed chats only)."""
+    chat_id = update.effective_chat.id
+
+    if config.ALLOWED_CHAT_IDS and chat_id not in config.ALLOWED_CHAT_IDS:
+        return
+
+    if not config.GOOGLE_SHEET_ID:
+        await update.message.reply_text("Google Sheet ID is not configured.")
+        return
+
+    url = f"https://docs.google.com/spreadsheets/d/{config.GOOGLE_SHEET_ID}"
+    await update.message.reply_text(
+        f'<a href="{url}">Hunt Stats — Google Sheet</a>',
+        parse_mode="HTML",
+    )
+
+
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """/help — show all available commands."""
     await update.message.reply_text(
@@ -147,6 +167,8 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "Example: <code>/log 6/12/1</code>\n\n"
         "<code>/stats</code>\n"
         "Show overall hunt statistics.\n\n"
+        "<code>/doc</code>\n"
+        "Link to the Google Sheet.\n\n"
         "<code>@HuntStatClaudeBot question</code>\n"
         "Ask Claude anything.",
         parse_mode="HTML",
