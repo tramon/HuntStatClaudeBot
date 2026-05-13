@@ -3,6 +3,9 @@ Claude agent -- answers questions as "The Priest", a Hunt: Showdown veteran.
 
 Supports web_search tool: Claude decides autonomously when to search.
 Set TAVILY_API_KEY to enable. Leave empty to disable silently.
+
+Knowledge base: relevant .md files from knowledge/ are injected into
+the system prompt when the query matches topic keywords.
 """
 
 import logging
@@ -107,18 +110,20 @@ async def handle_claude(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     sender = message.from_user.username or message.from_user.first_name or "someone"
     current = f"{sender}: {message.text or ''}"
 
+    system = SYSTEM_PROMPT
+
+    # Inject relevant knowledge base content if query matches a topic
+    from utils.knowledge import get_relevant_knowledge
+    knowledge = get_relevant_knowledge(message.text or "")
+    if knowledge:
+        system += "\n\n---\nKnowledge base (use this as authoritative reference):\n" + knowledge
+
     if config.CLAUDE_MEMORY:
         from utils.history import get_recent_messages
         recent = get_recent_messages(update.effective_chat.id)
         history_lines = [f"{m.get('username', 'user')}: {m['text']}" for m in recent]
         history_text = "\n".join(history_lines)
-        system = (
-            SYSTEM_PROMPT
-            + "\n\nRecent chat history (already answered -- do NOT repeat these):\n"
-            + history_text
-        )
-    else:
-        system = SYSTEM_PROMPT
+        system += "\n\nRecent chat history (already answered -- do NOT repeat these):\n" + history_text
 
     messages = [{"role": "user", "content": current}]
     tools = _build_tools()
@@ -171,7 +176,7 @@ async def _run_agent_loop(system: str, messages: list, tools: list) -> str:
     if tools:
         kwargs["tools"] = tools
 
-    max_rounds = 10
+    max_rounds = 5
     for _round in range(max_rounds):
         # Last round: remove tools so Claude is forced to answer with what it has
         if _round == max_rounds - 1:
