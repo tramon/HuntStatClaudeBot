@@ -11,9 +11,13 @@ from telegram.ext import Application, CallbackQueryHandler, ChatMemberHandler
 from telegram.ext import CommandHandler, MessageHandler, filters
 
 import config
-from handlers.commands import cmd_log, cmd_stats, cmd_log_callback, menu_callback, cmd_help, cmd_doc
+from handlers.callbacks import menu_callback
+from handlers.doc import cmd_doc
+from handlers.help import cmd_help
+from handlers.log import cmd_log, cmd_log_callback
 from handlers.mention import handle_mention
 from handlers.security import handle_new_chat_member
+from handlers.stats import cmd_stats
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",

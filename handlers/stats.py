@@ -1,5 +1,8 @@
 """
 Stats handler -- reads from Google Sheets and returns aggregate summary.
+
+handle_stats  -- shared logic (called by mention router and callbacks)
+cmd_stats     -- /stats command entry point
 """
 
 import logging
@@ -61,3 +64,8 @@ async def handle_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         reply,
         parse_mode="HTML",
     )
+
+
+async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/stats command -- delegates to handle_stats."""
+    await handle_stats(update, context)
