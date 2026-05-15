@@ -10,6 +10,8 @@ from telegram.ext import ContextTypes
 
 from utils.sheets import SheetsError, append_session
 
+from handlers.claude_agent import get_session_comment
+
 logger = logging.getLogger(__name__)
 
 _RESULT_RE = re.compile(r"(\d+)\s*/\s*(\d+)(?:\s*/\s*(\d+))?")
@@ -84,6 +86,12 @@ async def cmd_log(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         parse_mode="HTML",
         reply_markup=keyboard,
     )
+
+    # Ask Claude to comment on the result (silent if unavailable)
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+    comment = await get_session_comment(won=won, total=total, win_rate=win_rate)
+    if comment:
+        await update.message.reply_text(comment)
 
 
 async def cmd_log_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

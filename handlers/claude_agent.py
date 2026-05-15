@@ -154,6 +154,41 @@ async def handle_claude(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await message.reply_text(reply)
 
 
+async def get_session_comment(won: int, total: int, win_rate: int) -> str | None:
+    """Return a short in-character comment on a session result, or None on failure.
+
+    Thresholds:
+      < 20%  — terrible
+      20-30% — average / ok-ish, somewhat good
+      > 30%  — great
+    """
+    if win_rate < 20:
+        mood = "terrible — a disaster, genuinely painful to look at"
+    elif win_rate <= 30:
+        mood = "average / ok-ish, somewhat good — not great, not awful"
+    else:
+        mood = "great — impressive, actually worth celebrating"
+
+    prompt = (
+        f"Session result: {won} wins out of {total} missions ({win_rate}%).\n"
+        f"Mood of this result: {mood}.\n\n"
+        "Write 1-2 sentences commenting on this session, in character as The Priest. "
+        "Be dry, brief, in character. Ukrainian or English — pick one, stay consistent."
+    )
+
+    try:
+        response = _get_client().messages.create(
+            model=config.CLAUDE_MODEL,
+            max_tokens=120,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text.strip()
+    except Exception as e:
+        logger.warning(f"Session comment skipped: {e}")
+        return None
+
+
 async def _run_agent_loop(system: str, messages: list, tools: list) -> str:
     """
     Run the Claude tool-use loop.
