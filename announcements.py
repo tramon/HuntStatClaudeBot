@@ -5,11 +5,13 @@ To add a new announcement -- add an entry to ANNOUNCEMENTS.
 Messages are sent to ALL chats listed in ALLOWED_CHAT_IDS (from secrets/.env).
 
 Cron format: "minute hour day_of_month month day_of_week"
-  0 9 * * 1-5     → 09:00 Mon-Fri
-  0 17 * * 5      → 17:00 every Friday
-  0 10 * * 1      → 10:00 every Monday
-  0 9,18 * * *    → 09:00 and 18:00 every day
-  */30 * * * *    → every 30 minutes
+  0 9 * * 1-5     -> 09:00 Mon-Fri
+  0 17 * * 5      -> 17:00 every Friday
+  0 10 * * 1      -> 10:00 every Monday
+  0 9,18 * * *    -> 09:00 and 18:00 every day
+  */30 * * * *    -> every 30 minutes
+
+APScheduler day_of_week: 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
 
 Timezone: Europe/Kyiv
 
@@ -28,16 +30,16 @@ ANNOUNCEMENTS: list[dict] = [
     {
         "prompt": (
             "Сьогодні середа. Нагадай групі перевірити щотижневі челенджі в Hunt: Showdown. "
-            "декілька речень в характері The Priest. Українською."
+            "Декілька речень в характері The Priest. Українською."
         ),
-        "cron": "0 11 * * 3",   # 11:00 every Wednesday
+        "cron": "0 11 * * 2",   # 11:00 every Wednesday
     },
     {
         "prompt": (
-            "Сьогодні Неділя. Вже вечір. Нагадай групі нагадай групі, що скоро грати в Hunt: Showdown. "
-            "одне речення в характері The Priest. Українською."
-            "Приклад: Ей, хлопці, то ми сьогодні граємо чи ні?"
+            "Сьогодні неділя, вже вечір. "
+            "Нагадай групі що скоро час грати в Hunt: Showdown. "
+            "Одне речення в характері The Priest. Українською."
         ),
-        "cron": "0 21 * * 7",   # 21:00 every Sunday
+        "cron": "0 21 * * 6",   # 21:00 every Sunday (APScheduler: 6=Sun)
     },
 ]

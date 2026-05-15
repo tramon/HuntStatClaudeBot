@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 async def post_init(app: Application) -> None:
-    """Register the command menu that appears when users tap / in Telegram."""
+    """Register command menu and start scheduler (runs inside the event loop)."""
     await app.bot.set_my_commands([
         BotCommand("log",   "Log a session result  (e.g. /log 6/12)"),
         BotCommand("stats", "Show overall hunt stats"),
@@ -38,6 +38,11 @@ async def post_init(app: Application) -> None:
         BotCommand("help",  "Show all available commands"),
     ])
     logger.info("Bot command menu registered")
+
+    scheduler = setup_scheduler(app.bot)
+    if scheduler.get_jobs():
+        scheduler.start()
+        logger.info("Announcement scheduler started")
 
 
 def main() -> None:
@@ -70,11 +75,6 @@ def main() -> None:
     # Private messages (all text, no mention needed)
     private_text = filters.TEXT & filters.ChatType.PRIVATE & ~filters.COMMAND
     app.add_handler(MessageHandler(private_text, handle_mention))
-
-    scheduler = setup_scheduler(app.bot)
-    if scheduler.get_jobs():
-        scheduler.start()
-        logger.info("Announcement scheduler started")
 
     logger.info("Bot is running -- press Ctrl+C to stop")
     app.run_polling(drop_pending_updates=True)
