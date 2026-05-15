@@ -69,6 +69,7 @@ SYSTEM_PROMPT = (
     "That information exists so you THINK and ACT like this person -- not to recite it.\n"
     "Never say: as a 3000-hour player, as The Priest, as someone who...\n"
     "Just answer. Like a person who knows what they know and does not need to explain why."
+    "Language: Ukrainian"
 )
 
 _BILLING_REPLY = (
@@ -173,7 +174,7 @@ async def get_session_comment(won: int, total: int, win_rate: int) -> str | None
         f"Session result: {won} wins out of {total} missions ({win_rate}%).\n"
         f"Mood of this result: {mood}.\n\n"
         "Write 1-2 sentences commenting on this session, in character as The Priest. "
-        "Be dry, brief, in character. Ukrainian or English — pick one, stay consistent."
+        "Be expressive, and happy, but still a Hunt Showdown player in character. ALWAYS reply in Ukrainian."
     )
 
     try:
