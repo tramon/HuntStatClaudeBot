@@ -11,6 +11,7 @@ from telegram.ext import Application, CallbackQueryHandler, ChatMemberHandler
 from telegram.ext import CommandHandler, MessageHandler, filters
 
 import config
+from utils.scheduler import setup_scheduler
 from handlers.callbacks import menu_callback
 from handlers.doc import cmd_doc
 from handlers.help import cmd_help
@@ -69,6 +70,11 @@ def main() -> None:
     # Private messages (all text, no mention needed)
     private_text = filters.TEXT & filters.ChatType.PRIVATE & ~filters.COMMAND
     app.add_handler(MessageHandler(private_text, handle_mention))
+
+    scheduler = setup_scheduler(app.bot)
+    if scheduler.get_jobs():
+        scheduler.start()
+        logger.info("Announcement scheduler started")
 
     logger.info("Bot is running -- press Ctrl+C to stop")
     app.run_polling(drop_pending_updates=True)
