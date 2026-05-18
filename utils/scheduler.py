@@ -86,6 +86,8 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
             logger.warning(f"Announcement #{idx} is incomplete -- skipped")
             continue
 
+        jitter = entry.get("jitter")  # optional: random delay in seconds
+
         try:
             parts = cron.split()
             if len(parts) != 5:
@@ -98,14 +100,17 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
                 month=month,
                 day_of_week=day_of_week,
                 timezone=_TZ,
+                jitter=jitter,
             )
         except Exception as e:
             logger.error(f"Announcement #{idx} bad cron {cron!r}: {e} -- skipped")
             continue
 
         mode = "claude" if has_prompt else "static"
+        jitter_info = f" jitter={jitter}s" if jitter else ""
         scheduler.add_job(_make_job(bot, entry), trigger)
         registered += 1
+        logger.info(f"Announcement #{idx} scheduled: cron={cron!r} mode={mode}{jitter_info}")
         logger.info(f"Announcement #{idx} scheduled: cron={cron!r} mode={mode}")
 
     logger.info(f"Scheduler ready: {registered} announcement(s) registered")
