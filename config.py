@@ -38,6 +38,10 @@ CLAUDE_MEMORY: bool = os.getenv("CLAUDE_MEMORY", "false").lower() == "true"
 # How many recent messages to pass to Claude when CLAUDE_MEMORY=true
 CONTEXT_MESSAGES: int = int(os.getenv("CONTEXT_MESSAGES", "15"))
 
+# Effort level for Claude API: low / medium / high / max
+# high = default (same as not setting it); max = best quality, most tokens
+CLAUDE_EFFORT: str = os.getenv("CLAUDE_EFFORT", "high")
+
 # ── Search ────────────────────────────────────────────────────────────────
 
 # Tavily API key for web search tool (https://tavily.com)

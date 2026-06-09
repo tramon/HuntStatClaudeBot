@@ -31,8 +31,7 @@ def _get_client() -> anthropic.Anthropic:
 SYSTEM_PROMPT = (
     'Your name is Claude, but in Hunt: Showdown you go by "The Priest" --'
     " not because you're holy, but because you always show up right before someone dies.\n\n"
-    "You have 3000+ hours in Hunt: Showdown 1896. You know every compound, every boss spawn,"
-    " every hunter build, and every dirty trick in the book.\n\n"
+    "You have 3000+ hours in Hunt: Showdown 1896.\n\n"
     "Your life: you're 40. Job, studies, chores, maybe 2 hours to play if lucky."
     " Sleep is a rumor. Coffee is a personality trait.\n\n"
     "Beyond Hunt: RPGs, shooters, board games.\n\n"
@@ -68,8 +67,15 @@ SYSTEM_PROMPT = (
     "IMPORTANT: Do NOT describe yourself, your hours, your backstory, or your loadout in replies.\n"
     "That information exists so you THINK and ACT like this person -- not to recite it.\n"
     "Never say: as a 3000-hour player, as The Priest, as someone who...\n"
-    "Just answer. Like a person who knows what they know and does not need to explain why."
-    "Language: Ukrainian"
+    "Just answer. Like a person who knows what they know and does not need to explain why.\n\n"
+    "CRITICAL -- Hunt: Showdown game knowledge:\n"
+    "Your training data about Hunt: Showdown is incomplete and likely outdated.\n"
+    "Do NOT rely on your own training for game facts: traits, weapons, mechanics, updates, prices, meta.\n"
+    "For game-specific questions:\n"
+    "  1. If a knowledge base is provided below -- use ONLY that.\n"
+    "  2. If no knowledge base is provided -- use the web_search tool to find current info.\n"
+    "  3. If search is unavailable -- say you are not sure and suggest checking the official wiki.\n"
+    "Never invent stats, costs, trait names, or mechanics. Wrong info is worse than no info."
 )
 
 _BILLING_REPLY = (
@@ -79,12 +85,12 @@ _BILLING_REPLY = (
     " \u0440\u0430\u0445\u0443\u043d\u043e\u043a: https://console.anthropic.com/"
 )
 
-# Tool definition sent to Claude
 _SEARCH_TOOL = {
     "name": "web_search",
     "description": (
         "Search the web for current information. Use when asked about recent events, "
-        "news, prices, patch notes, or anything that may have changed recently."
+        "news, prices, patch notes, or anything that may have changed recently. "
+        "Also use for Hunt: Showdown game facts when no knowledge base is available."
     ),
     "input_schema": {
         "type": "object",
@@ -100,7 +106,6 @@ _SEARCH_TOOL = {
 
 
 def _build_tools() -> list:
-    """Return tools list if search is enabled, else empty list."""
     return [_SEARCH_TOOL] if config.TAVILY_API_KEY else []
 
 
@@ -113,11 +118,20 @@ async def handle_claude(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     system = SYSTEM_PROMPT
 
-    # Inject relevant knowledge base content if query matches a topic
     from utils.knowledge import get_relevant_knowledge
     knowledge = get_relevant_knowledge(message.text or "")
     if knowledge:
-        system += "\n\n---\nKnowledge base (use this as authoritative reference):\n" + knowledge
+        system += (
+            "\n\n---\n"
+            "KNOWLEDGE BASE -- SINGLE SOURCE OF TRUTH:\n"
+            + knowledge
+            + "\n\n---\n"
+            "STRICT RULES when knowledge base is present:\n"
+            "- Answer ONLY from the knowledge base above. Do not add, invent, or extrapolate.\n"
+            "- If the answer is not in the knowledge base, say so clearly. Do not guess.\n"
+            "- Numbers, names, costs, and mechanics must match the knowledge base exactly.\n"
+            "- Stay in character as The Priest, but accuracy beats personality."
+        )
 
     if config.CLAUDE_MEMORY:
         from utils.history import get_recent_messages
@@ -156,25 +170,19 @@ async def handle_claude(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 async def get_session_comment(won: int, total: int, win_rate: int) -> str | None:
-    """Return a short in-character comment on a session result, or None on failure.
-
-    Thresholds:
-      < 20%  — terrible
-      20-30% — average / ok-ish, somewhat good
-      > 30%  — great
-    """
+    """Return a short in-character comment on a session result, or None on failure."""
     if win_rate < 20:
-        mood = "terrible — a disaster, genuinely painful to look at"
+        mood = "terrible -- a disaster, genuinely painful to look at"
     elif win_rate <= 30:
-        mood = "average / ok-ish, somewhat good — not great, not awful"
+        mood = "average / ok-ish, somewhat good -- not great, not awful"
     else:
-        mood = "great — impressive, actually worth celebrating"
+        mood = "great -- impressive, actually worth celebrating"
 
     prompt = (
         f"Session result: {won} wins out of {total} missions ({win_rate}%).\n"
         f"Mood of this result: {mood}.\n\n"
         "Write 1-2 sentences commenting on this session, in character as The Priest. "
-        "Be expressive, and happy, but still a Hunt Showdown player in character. ALWAYS reply in Ukrainian."
+        "Be dry, brief, in character. ALWAYS reply in Ukrainian."
     )
 
     try:
@@ -183,6 +191,7 @@ async def get_session_comment(won: int, total: int, win_rate: int) -> str | None
             max_tokens=120,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}],
+            output_config={"effort": config.CLAUDE_EFFORT},
         )
         return response.content[0].text.strip()
     except Exception as e:
@@ -208,13 +217,13 @@ async def _run_agent_loop(system: str, messages: list, tools: list) -> str:
         max_tokens=1024,
         system=system,
         messages=messages,
+        output_config={"effort": config.CLAUDE_EFFORT},
     )
     if tools:
         kwargs["tools"] = tools
 
     max_rounds = 5
     for _round in range(max_rounds):
-        # Last round: remove tools so Claude is forced to answer with what it has
         if _round == max_rounds - 1:
             kwargs.pop("tools", None)
 
@@ -226,7 +235,6 @@ async def _run_agent_loop(system: str, messages: list, tools: list) -> str:
                     return block.text
             return ""
 
-        # Execute tool calls
         tool_results = []
         for block in response.content:
             if block.type != "tool_use":
