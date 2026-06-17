@@ -147,19 +147,20 @@
 
 ## ❓ Зброї додатково
 
-| Зброя | Size у файлі | 
-|-------|--------------|
-| **Drilling** | 4            | 
-| **Drilling Shorty** | 2            | 
-| **Crossbow** | 4            | 
-| **Hunting Bow** | 3            | 
-| **Maynard Sniper** | 4            | 
-| **1865 Carbine** | 3            | 
+| Зброя                | Size у файлі | 
+|----------------------|--------------|
+| **Drilling**         | 4            | 
+| **Drilling Shorty**  | 2            | 
+| **Crossbow**         | 4            | 
+| **Hunting Bow**      | 3            | 
+| **Maynard Sniper**   | 4            | 
+| **1865 Carbine**     | 3            | 
 | **Springfield 1866** | 4            | 
-| **Hand Crossbow** | 1            | 
-| **Chu Ko Nu** | 2            |
-| **Bomb Launcher** | 2         | 
-| **Bomb Lance** | 3         | 
-| **New Army** | 1          | 
-| **Wildland** | 4           | 
-| **Homestead 78** | 4          | 
+| **Hand Crossbow**    | 1            | 
+| **Chu Ko Nu**        | 2            |
+| **Bomb Launcher**    | 2            | 
+| **Bomb Lance**       | 3            | 
+| **New Army**         | 1            | 
+| **Wildland**         | 4            | цю зброю не можна купити. Але можна знайти на карті.
+| **Homestead 78**     | 4            | цю зброю не можна купити. Але можна знайти на карті.
+| **Maxim**            | world wepaon | цю зброю не можна винести з карти, але вона є в грі і може бути використана в певних місіях. |
