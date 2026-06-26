@@ -1,11 +1,8 @@
 """
-Claude agent -- answers questions as "The Priest", a Hunt: Showdown veteran.
+Claude agent -- handles API calls and tool-use loop.
 
-Supports web_search tool: Claude decides autonomously when to search.
-Set TAVILY_API_KEY to enable. Leave empty to disable silently.
-
-Knowledge base: relevant .md files from knowledge/ are injected into
-the system prompt when the query matches topic keywords.
+Prompt building lives in persona/builder.py.
+Character and rules live in persona/persona.py and persona/rules.py.
 """
 
 import logging
@@ -15,6 +12,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 import config
+from system_prompt import SYSTEM_PROMPT, build_system_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -27,58 +25,6 @@ def _get_client() -> anthropic.Anthropic:
         _client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
     return _client
 
-
-SYSTEM_PROMPT = (
-    'Your name is Claude, but in Hunt: Showdown you go by "The Priest" --'
-    " not because you're holy, but because you always show up right before someone dies.\n\n"
-    "You have 3000+ hours in Hunt: Showdown 1896.\n\n"
-    "Your life: you're 40. Job, studies, chores, maybe 2 hours to play if lucky."
-    " Sleep is a rumor. Coffee is a personality trait.\n\n"
-    "Beyond Hunt: RPGs, shooters, board games.\n\n"
-    "Your loadout:\n"
-    "- Primary: Lebel 1886. Slow, hits like a freight train. Not meta. Does not care.\n"
-    "- Secondary: Scottfield Model 3, nicknamed Last Rites.\n"
-    "- Tools: Vitality Shot + First Aid Kit.\n"
-    "- Consumables: Weak Poison Bomb, Flash Bomb.\n"
-    "- Traits: Packmule, Physician, Iron Repeater.\n\n"
-    "Your playstyle -- The Priest does not rush. The Priest waits.\n"
-    "- Information player. Listen first: crows, dogs, gunshots, footsteps.\n"
-    "- Mid-range. Never push blind. Patience is free. Respawn tokens are not.\n"
-    "- Extract camp when needed -- zero shame. Always have an exit.\n\n"
-    "Personality:\n"
-    "- Cynical but not bitter. Dry humor. Genuinely cares about these friends.\n"
-    "- Tired. Always tired. But the moment the queue pops -- locked in.\n"
-    "- Occasionally a faint religious undertone -- very dry, very rare (~5% of replies).\n"
-    "  The bayou is a cathedral. A quiet amen after a good kill. The tithe must be paid.\n"
-    "  Never preachy. Just a flavor. One line at most.\n\n"
-    "Language:\n"
-    "- Ukrainian and English. ALWAYS reply in the same language the person used.\n"
-    "- NEVER use the word 'Баюн'. It is wrong and unrelated to the game.\n"
-    "  The territory in Hunt: Showdown is called 'байю' (or 'байо') -- use that.\n\n"
-    "Bot commands:\n"
-    "- /log win/missions (e.g. /log 6/12)\n"
-    "- /log win/missions/wipes (e.g. /log 6/12/1)\n"
-    "- /stats -- overall hunt statistics\n"
-    "- /help -- all commands\n\n"
-    "Rules:\n"
-    "- Stats are shown automatically when someone asks -- do NOT tell them to use /stats.\n"
-    "- NEVER log sessions yourself. If someone shares a result, do NOT log it for them.\n"
-    "- Do NOT mention bot commands unprompted.\n"
-    "  Only bring up commands if someone explicitly asks how to log or about stats.\n\n"
-    "Keep replies short. You are The Priest. You just happen to run on code.\n"
-    "IMPORTANT: Do NOT describe yourself, your hours, your backstory, or your loadout in replies.\n"
-    "That information exists so you THINK and ACT like this person -- not to recite it.\n"
-    "Never say: as a 3000-hour player, as The Priest, as someone who...\n"
-    "Just answer. Like a person who knows what they know and does not need to explain why.\n\n"
-    "CRITICAL -- Hunt: Showdown game knowledge:\n"
-    "Your training data about Hunt: Showdown is incomplete and likely outdated.\n"
-    "Do NOT rely on your own training for game facts: traits, weapons, mechanics, updates, prices, meta.\n"
-    "For game-specific questions:\n"
-    "  1. If a knowledge base is provided below -- use ONLY that.\n"
-    "  2. If no knowledge base is provided -- use the web_search tool to find current info.\n"
-    "  3. If search is unavailable -- say you are not sure and suggest checking the official wiki.\n"
-    "Never invent stats, costs, trait names, or mechanics. Wrong info is worse than no info."
-)
 
 _BILLING_REPLY = (
     "\u0423 \u043c\u0435\u043d\u0435 \u0437\u0430\u043a\u0456\u043d\u0447\u0438\u043b\u0438\u0441\u044c"
@@ -97,10 +43,7 @@ _SEARCH_TOOL = {
     "input_schema": {
         "type": "object",
         "properties": {
-            "query": {
-                "type": "string",
-                "description": "The search query.",
-            }
+            "query": {"type": "string", "description": "The search query."}
         },
         "required": ["query"],
     },
@@ -116,38 +59,13 @@ async def handle_claude(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
 
     sender = message.from_user.username or message.from_user.first_name or "someone"
-    current = f"{sender}: {message.text or ''}"
+    text = message.text or ""
 
-    system = SYSTEM_PROMPT
-
-    from utils.knowledge import get_relevant_knowledge
-    knowledge = get_relevant_knowledge(message.text or "")
-    if knowledge:
-        system += (
-            "\n\n---\n"
-            "KNOWLEDGE BASE -- SINGLE SOURCE OF TRUTH:\n"
-            + knowledge
-            + "\n\n---\n"
-            "STRICT RULES when knowledge base is present:\n"
-            "- Answer ONLY from the knowledge base above. Do not add, invent, or extrapolate.\n"
-            "- If the answer is not in the knowledge base, say so clearly. Do not guess.\n"
-            "- Numbers, names, costs, and mechanics must match the knowledge base exactly.\n"
-            "- Stay in character as The Priest, but accuracy beats personality."
-        )
-
-    if config.CLAUDE_MEMORY:
-        from utils.history import get_recent_messages
-        recent = get_recent_messages(update.effective_chat.id)
-        history_lines = [f"{m.get('username', 'user')}: {m['text']}" for m in recent]
-        history_text = "\n".join(history_lines)
-        system += "\n\nRecent chat history (already answered -- do NOT repeat these):\n" + history_text
-
-    messages = [{"role": "user", "content": current}]
-    tools = _build_tools()
+    system = build_system_prompt(query=text, chat_id=update.effective_chat.id)
+    messages = [{"role": "user", "content": f"{sender}: {text}"}]
 
     try:
-        reply = await _run_agent_loop(system, messages, tools)
-
+        reply = await _run_agent_loop(system, messages, _build_tools())
     except anthropic.APIStatusError as e:
         logger.error(f"Anthropic API error {e.status_code}: {e}")
         err = str(e).lower()
@@ -172,7 +90,7 @@ async def handle_claude(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 async def get_session_comment(won: int, total: int, win_rate: int) -> str | None:
-    """Return a short in-character comment on a session result, or None on failure."""
+    """Return a short comment on a session result, or None on failure."""
     if win_rate < 20:
         mood = "terrible -- a disaster, genuinely painful to look at"
     elif win_rate <= 30:
@@ -183,8 +101,8 @@ async def get_session_comment(won: int, total: int, win_rate: int) -> str | None
     prompt = (
         f"Session result: {won} wins out of {total} missions ({win_rate}%).\n"
         f"Mood of this result: {mood}.\n\n"
-        "Write 1-2 sentences commenting on this session, in character as The Priest. "
-        "Be dry, brief, in character. ALWAYS reply in Ukrainian."
+        "Write 1-2 sentences commenting on this session. "
+        "Be dry, brief, match the tone of a gaming group chat. ALWAYS reply in Ukrainian."
     )
 
     try:
@@ -206,10 +124,9 @@ async def _run_agent_loop(system: str, messages: list, tools: list) -> str:
     Run the Claude tool-use loop.
 
     1. Call Claude.
-    2. If stop_reason == tool_use -- execute each requested tool, append results.
-    3. Call Claude again with the results.
-    4. On the last allowed round, remove tools to force a text answer.
-    5. Return the final text reply.
+    2. If stop_reason == tool_use -- execute tools, append results.
+    3. Repeat up to max_rounds. On the last round remove tools to force a text answer.
+    4. Return the final text reply.
     """
     from utils.search import web_search
 

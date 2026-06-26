@@ -34,7 +34,7 @@ async def cmd_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     # Extract text after the command
     text = (message.text or "").strip()
-    for cmd in ("/broadcast", "/bc"):
+    for cmd in ("/broadcast", "/bc", "/send"):
         if text.lower().startswith(cmd):
             text = text[len(cmd):].strip()
             break

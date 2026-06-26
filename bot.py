@@ -68,6 +68,7 @@ def main() -> None:
     app.add_handler(CommandHandler("help",      cmd_help))
     app.add_handler(CommandHandler("broadcast", cmd_broadcast))
     app.add_handler(CommandHandler("bc",        cmd_broadcast))
+    app.add_handler(CommandHandler("send",      cmd_broadcast))
 
     app.add_handler(CallbackQueryHandler(cmd_log_callback, pattern="^log_help$"))
     app.add_handler(CallbackQueryHandler(menu_callback,    pattern="^menu_"))
