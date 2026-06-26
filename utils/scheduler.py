@@ -22,15 +22,39 @@ logger = logging.getLogger(__name__)
 
 _TZ = "Europe/Kyiv"
 
+# Max chars per message line when building the history block (keeps tokens sane).
+_MSG_TRUNCATE = 120
 
-async def _generate_text(prompt: str) -> str | None:
+
+def _format_history(messages: list[dict]) -> str:
+    """Turn a list of message dicts into a compact text block for the prompt."""
+    lines = []
+    for m in messages:
+        name = m.get("username", "user")
+        text = m.get("text", "").replace("\n", " ").strip()
+        if len(text) > _MSG_TRUNCATE:
+            text = text[:_MSG_TRUNCATE] + "…"
+        if text:
+            lines.append(f"{name}: {text}")
+    return "\n".join(lines)
+
+
+async def _generate_text(prompt: str, history_text: str = "") -> str | None:
     """Ask Claude to generate announcement text. Returns None on failure."""
     try:
         from handlers.claude_agent import _get_client, SYSTEM_PROMPT
+        system = SYSTEM_PROMPT
+        if history_text:
+            system += (
+                "\n\n---\n"
+                "ОСТАННІ ПОВІДОМЛЕННЯ ЧАТУ (контекст -- не повторюй теми які вже нещодавно обговорювались):\n"
+                + history_text
+                + "\n---"
+            )
         response = _get_client().messages.create(
             model=config.CLAUDE_MODEL,
             max_tokens=200,
-            system=SYSTEM_PROMPT,
+            system=system,
             messages=[{"role": "user", "content": prompt}],
         )
         return response.content[0].text.strip()
@@ -42,18 +66,41 @@ async def _generate_text(prompt: str) -> str | None:
 def _make_job(bot: Bot, entry: dict):
     """Return an async job that resolves text (static or Claude) and sends it."""
     async def job():
-        # Resolve text
-        if "prompt" in entry:
-            text = await _generate_text(entry["prompt"])
-            if not text:
-                logger.warning("Claude unavailable -- announcement skipped")
-                return
-        else:
+        has_prompt = bool(entry.get("prompt"))
+
+        # For static text -- resolve once, send to all chats
+        if not has_prompt:
             raw = entry["text"]
             text = raw() if callable(raw) else raw
+            for chat_id in config.ALLOWED_CHAT_IDS:
+                try:
+                    await bot.send_message(chat_id=chat_id, text=text)
+                    logger.info(f"Announcement sent to {chat_id}")
+                except Exception as e:
+                    logger.error(f"Failed to send announcement to {chat_id}: {e}")
+            return
 
-        # Send to all allowed chats
+        # For Claude-generated text -- generate per chat so history is chat-specific
         for chat_id in config.ALLOWED_CHAT_IDS:
+            history_text = ""
+            try:
+                from utils.history import get_recent_messages
+                messages = get_recent_messages(chat_id, limit=config.CONTEXT_MESSAGES)
+                if messages:
+                    history_text = _format_history(messages)
+                    logger.info(
+                        f"Announcement: loaded {len(messages)} history messages for chat {chat_id}"
+                    )
+                else:
+                    logger.info(f"Announcement: no history for chat {chat_id}, generating without context")
+            except Exception as e:
+                logger.warning(f"Could not load history for chat {chat_id}: {e}")
+
+            text = await _generate_text(entry["prompt"], history_text)
+            if not text:
+                logger.warning(f"Claude unavailable -- announcement skipped for chat {chat_id}")
+                continue
+
             try:
                 await bot.send_message(chat_id=chat_id, text=text)
                 logger.info(f"Announcement sent to {chat_id}")
@@ -106,12 +153,11 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
             logger.error(f"Announcement #{idx} bad cron {cron!r}: {e} -- skipped")
             continue
 
-        mode = "claude" if has_prompt else "static"
+        mode = "claude+history" if has_prompt else "static"
         jitter_info = f" jitter={jitter}s" if jitter else ""
         scheduler.add_job(_make_job(bot, entry), trigger)
         registered += 1
         logger.info(f"Announcement #{idx} scheduled: cron={cron!r} mode={mode}{jitter_info}")
-        logger.info(f"Announcement #{idx} scheduled: cron={cron!r} mode={mode}")
 
     logger.info(f"Scheduler ready: {registered} announcement(s) registered")
     return scheduler

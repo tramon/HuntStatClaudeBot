@@ -51,7 +51,14 @@ def save_message(chat_id: int, user_id: int, username: str, text: str) -> None:
     _save(messages)
 
 
-def get_recent_messages(chat_id: int) -> list[dict[str, Any]]:
+def get_recent_messages(chat_id: int, limit: int | None = None) -> list[dict[str, Any]]:
+    """Return the most recent messages for a chat.
+
+    limit -- how many messages to return (default: config.CONTEXT_MESSAGES).
+             Pass a higher value to get more history (e.g. for announcements).
+    """
+    if limit is None:
+        limit = config.CONTEXT_MESSAGES
     messages = _load()
     chat_messages = [m for m in messages if m.get("chat_id") == chat_id]
-    return chat_messages[-config.CONTEXT_MESSAGES:]
+    return chat_messages[-limit:]
