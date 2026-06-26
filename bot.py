@@ -12,6 +12,7 @@ from telegram.ext import CommandHandler, MessageHandler, filters
 
 import config
 from utils.scheduler import setup_scheduler
+from handlers.broadcast import cmd_broadcast
 from handlers.callbacks import menu_callback
 from handlers.doc import cmd_doc
 from handlers.help import cmd_help
@@ -60,11 +61,13 @@ def main() -> None:
 
     app.add_handler(ChatMemberHandler(handle_new_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
 
-    app.add_handler(CommandHandler("log",   cmd_log))
-    app.add_handler(CommandHandler("stats", cmd_stats))
-    app.add_handler(CommandHandler("stat",  cmd_stats))
-    app.add_handler(CommandHandler("doc",   cmd_doc))
-    app.add_handler(CommandHandler("help",  cmd_help))
+    app.add_handler(CommandHandler("log",       cmd_log))
+    app.add_handler(CommandHandler("stats",     cmd_stats))
+    app.add_handler(CommandHandler("stat",      cmd_stats))
+    app.add_handler(CommandHandler("doc",       cmd_doc))
+    app.add_handler(CommandHandler("help",      cmd_help))
+    app.add_handler(CommandHandler("broadcast", cmd_broadcast))
+    app.add_handler(CommandHandler("bc",        cmd_broadcast))
 
     app.add_handler(CallbackQueryHandler(cmd_log_callback, pattern="^log_help$"))
     app.add_handler(CallbackQueryHandler(menu_callback,    pattern="^menu_"))
