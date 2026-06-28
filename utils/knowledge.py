@@ -59,6 +59,25 @@ def _load_file(filename: str) -> str:
         return ""
 
 
+def get_all_knowledge() -> str:
+    """Return the full knowledge base (all files joined).
+
+    Used for announcements and other contexts where no specific
+    query is available but accurate game data is still needed.
+    """
+    index = _load_index()
+    parts = []
+    for entry in index:
+        filename = entry.get("file", "")
+        if not filename:
+            continue
+        content = _load_file(filename)
+        if content:
+            parts.append(content)
+            logger.info(f"Knowledge loaded (full): {filename}")
+    return "\n\n---\n\n".join(parts)
+
+
 def get_relevant_knowledge(text: str) -> str:
     """Return knowledge file content relevant to the query, or empty string.
 

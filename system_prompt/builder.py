@@ -62,11 +62,29 @@ def build_system_prompt(query: str = "", chat_id: int | None = None) -> str:
 def build_announcement_prompt(history_text: str = "") -> str:
     """
     Assemble system prompt for scheduled announcements.
-    Injects chat history so Claude avoids repeating recent topics.
+
+    Always injects the full knowledge base so Claude never invents
+    trait names, weapon stats, or mob mechanics.
+    Also injects chat history so Claude avoids repeating recent topics.
     """
     from system_prompt import SYSTEM_PROMPT
+    from utils.knowledge import get_all_knowledge
 
     system = SYSTEM_PROMPT
+
+    # Full KB -- prevents hallucinated trait/weapon/mob names
+    knowledge = get_all_knowledge()
+    if knowledge:
+        system += (
+            "\n\n---\n"
+            "KNOWLEDGE BASE -- SINGLE SOURCE OF TRUTH:\n"
+            + knowledge
+            + "\n\n---\n"
+            "STRICT RULES:\n"
+            "- For any game fact (trait, weapon, mob, mechanic) use ONLY the knowledge base above.\n"
+            "- If a topic is not covered -- speak generally or pick a different topic.\n"
+            "- Never invent names, stats, or mechanics."
+        )
 
     if history_text:
         system += (

@@ -80,13 +80,31 @@ async def handle_mention(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await handle_stats(update, context)
 
     elif not clean:
+        # Bare @mention -- Claude responds and keyboard is attached to the reply
+        logger.info(f"Bare mention by {_sender_name(update)} in chat {chat_id}")
         keyboard = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("Log result", callback_data="menu_log"),
                 InlineKeyboardButton("Stats", callback_data="menu_stats"),
             ]
         ])
-        await message.reply_text("What would you like to do?", reply_markup=keyboard)
+        await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+        from system_prompt.builder import build_system_prompt
+        from handlers.claude_agent import _get_client
+        import config as _config
+        sender = _sender_name(update)
+        try:
+            resp = _get_client().messages.create(
+                model=_config.CLAUDE_MODEL,
+                max_tokens=120,
+                system=build_system_prompt(chat_id=chat_id),
+                messages=[{"role": "user", "content": f"{sender} just @mentioned you with no message."}],
+                output_config={"effort": _config.CLAUDE_EFFORT},
+            )
+            reply = resp.content[0].text.strip()
+        except Exception:
+            reply = "?"
+        await message.reply_text(reply, reply_markup=keyboard)
 
     else:
         logger.info(f"Claude invoked by {_sender_name(update)} in chat {chat_id}")
