@@ -65,6 +65,7 @@ def main() -> None:
     app.add_handler(CommandHandler("stats",     cmd_stats))
     app.add_handler(CommandHandler("stat",      cmd_stats))
     app.add_handler(CommandHandler("doc",       cmd_doc))
+    app.add_handler(CommandHandler("docs",      cmd_doc))
     app.add_handler(CommandHandler("help",      cmd_help))
     app.add_handler(CommandHandler("broadcast", cmd_broadcast))
     app.add_handler(CommandHandler("bc",        cmd_broadcast))

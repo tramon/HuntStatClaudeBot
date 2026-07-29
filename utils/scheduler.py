@@ -67,6 +67,10 @@ def _make_job(bot: Bot, entry: dict):
                     logger.error(f"Failed to send to {chat_id}: {e}")
             return
 
+        # Resolve prompt -- may be a callable (e.g. date-seeded topic picker)
+        raw_prompt = entry["prompt"]
+        prompt = raw_prompt() if callable(raw_prompt) else raw_prompt
+
         for chat_id in config.ALLOWED_CHAT_IDS:
             history_text = ""
             try:
@@ -78,7 +82,7 @@ def _make_job(bot: Bot, entry: dict):
             except Exception as e:
                 logger.warning(f"Could not load history for {chat_id}: {e}")
 
-            text = await _generate_text(entry["prompt"], history_text)
+            text = await _generate_text(prompt, history_text)
             if not text:
                 logger.warning(f"Announcement skipped for chat {chat_id}")
                 continue
