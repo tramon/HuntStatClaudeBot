@@ -45,6 +45,7 @@ async def _generate_text(prompt: str, history_text: str = "") -> str | None:
             max_tokens=200,
             system=system,
             messages=[{"role": "user", "content": prompt}],
+            output_config={"effort": config.CLAUDE_EFFORT},
         )
         return response.content[0].text.strip()
     except Exception as e:
