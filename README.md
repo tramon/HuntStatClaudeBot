@@ -52,3 +52,15 @@ python bot.py
 | `CLAUDE_MEMORY` | no | `true` to give Claude chat context (default: `false`) |
 | `GOOGLE_CREDENTIALS_FILE` | local | Path to service account JSON file |
 | `GOOGLE_CREDENTIALS_JSON` | Render/CI | Full JSON content of credentials file |
+
+## Hosting on GitHub Actions (24/7)
+
+The bot runs as a relay of ~5h45m GitHub Actions runs (`.github/workflows/bot.yml`):
+
+- `scripts/run_bot.sh` restarts `bot.py` if it crashes and stops it gracefully at the deadline.
+- At the end each run starts the next one (`workflow_dispatch` with `handover=true`); it waits in the
+  concurrency queue and starts as soon as the previous run finishes.
+- `push` to `main` or a manual **Run workflow** = deliberate restart: replaces the running bot at once.
+- `.github/workflows/watchdog.yml` (every ~30 min) starts the bot if no run is active, and re-enables
+  itself so GitHub does not disable scheduled workflows after 60 days without commits.
+- Messages sent while the bot restarts are kept by Telegram and answered after start (`drop_pending_updates=False`).

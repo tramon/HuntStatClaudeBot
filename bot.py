@@ -8,7 +8,7 @@ import sys
 
 from telegram import BotCommand
 from telegram.ext import Application, CallbackQueryHandler, ChatMemberHandler
-from telegram.ext import CommandHandler, MessageHandler, filters
+from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
 
 import config
 from utils.scheduler import setup_scheduler
@@ -32,13 +32,16 @@ logger = logging.getLogger(__name__)
 
 async def post_init(app: Application) -> None:
     """Register command menu and start scheduler (runs inside the event loop)."""
-    await app.bot.set_my_commands([
-        BotCommand("log",   "Log a session result  (e.g. /log 6/12)"),
-        BotCommand("stats", "Show overall hunt stats"),
-        BotCommand("doc",   "Link to the Google Sheet"),
-        BotCommand("help",  "Show all available commands"),
-    ])
-    logger.info("Bot command menu registered")
+    try:
+        await app.bot.set_my_commands([
+            BotCommand("log",   "Log a session result  (e.g. /log 6/12)"),
+            BotCommand("stats", "Show overall hunt stats"),
+            BotCommand("doc",   "Link to the Google Sheet"),
+            BotCommand("help",  "Show all available commands"),
+        ])
+        logger.info("Bot command menu registered")
+    except Exception as e:  # a failed menu update must not stop the bot starting
+        logger.warning(f"Could not register command menu: {e}")
 
     scheduler = setup_scheduler(app.bot)
     if scheduler.get_jobs():
@@ -46,8 +49,17 @@ async def post_init(app: Application) -> None:
         logger.info("Announcement scheduler started")
 
 
+async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Log handler/polling errors instead of letting them go unreported."""
+    logger.error("Unhandled error while processing update", exc_info=context.error)
+
+
 def main() -> None:
-    config.validate()
+    try:
+        config.validate()
+    except EnvironmentError as e:
+        logger.critical(str(e))
+        sys.exit(2)  # exit code 2 = config error, scripts/run_bot.sh will not restart
 
     if config.ALLOWED_CHAT_IDS:
         logger.info(f"Restricted to chat IDs: {config.ALLOWED_CHAT_IDS}")
@@ -82,8 +94,12 @@ def main() -> None:
     private_text = filters.TEXT & filters.ChatType.PRIVATE & ~filters.COMMAND
     app.add_handler(MessageHandler(private_text, handle_mention))
 
+    app.add_error_handler(on_error)
+
     logger.info("Bot is running -- press Ctrl+C to stop")
-    app.run_polling(drop_pending_updates=True)
+    # drop_pending_updates=False: messages sent while the bot restarts (deploy,
+    # handover between Actions runs) are kept by Telegram and answered after start.
+    app.run_polling(drop_pending_updates=False)
 
 
 if __name__ == "__main__":
