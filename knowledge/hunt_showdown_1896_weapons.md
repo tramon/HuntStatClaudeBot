@@ -1,7 +1,7 @@
 # Hunt: Showdown 1896 — Knowledge Base
 ## Розділ: Weapons (Зброя)
 
-> **Актуальність:** Update 2.8 "Road to Hell" (9 червня 2026)
+> **Актуальність:** Update 2.8 "Road to Hell" (9 червня 2026) + зміни 2.8.1 (1 липня 2026) та 2.9 (вересень 2026) — див. розділ «Зміни після 2.8»
 >
 > **⚠️ НОВА СИСТЕМА СЛОТІВ (Update 2.8):** Стара система Small/Medium/Large → числова **Size 1–5**.
 > Ємність мисливця — **5 очок** (з Quartermaster — **6**). Два зброярні слоти.
@@ -66,7 +66,7 @@
 | **Romero 77 Handcannon** | 2 ✅ | 46 | Shotgun | Обріз Romero. Дешево і ефективно зблизька. |
 | **Caldwell Rival 78 Handcannon** | 2 ✅ | 85 | Shotgun | Обріз двостволки. Дуже широкий розкид. |
 | **Specter 1882 Compact** | 2 ✅ | 164 | Shotgun | Обріз помпового дробовика. |
-| **Terminus Handcannon** | 2 ✅ | 218 | Shotgun | З Levering — найкраща кімнатна мітла у Size 2. |
+| **Terminus Handcannon** | 2 ✅ | 148 | Shotgun | З Levering — найкраща кімнатна мітла у Size 2. |
 | **Auto-4 Shorty** | 2 ✅ | 450 | Shotgun | Укорочений напівавтомат на 4 патрони. Легендарний вибір у пару до довгоствола. |
 | **Drilling Shorty** | 2 🔶 | 330 | Medium + Shotgun | Обріз триствольної Drilling. Раніше Medium Slot → логічно Size 2. ❓ Перевір у грі. |
 | **Bomb Launcher** | 2 🔶 | ~120 | Special | Гібрид дробовика та пускової. Steel Balls = дробовик ближнього бою. Harpoon + Frag заряди. Раніше Medium Slot → логічно Size 2. ⚠️ Waxed Frag Charge тепер дефіцит. ❓ Перевір у грі. |
@@ -111,11 +111,11 @@
 | **Lebel 1886** | 4 ✅ | 397 | 🔴 Special Long | Bolt-action. Магазин 10 патронів, куля 630 м/с. |
 | **Mosin-Nagant M1891** | 4 ✅ | 490 | 🔴 Special Long | Абсолютна мета. Висока швидкість кулі, дозарядка обоймами по 5 шт. |
 | **Romero 77** | 4 🔶 | 34 | Shotgun | Однозарядний дробовик. Найбільша дальність ваншоту, найвужчий розкид. ❓ Перевір у грі. |
-| **Caldwell Rival 78** | 4 🔶 | 150 | Shotgun | Двостволка. Два швидкі постріли підряд. ❓ Перевір у грі. |
+| **Caldwell Rival 78** | 4 🔶 | 170 | Shotgun | Двостволка. Два швидкі постріли підряд. ❓ Перевір у грі. |
 | **Homestead 78** | 4 🔶 | scarce | Shotgun | Scarce double-barrel дробовик. Гібрид Rival + Romero — відмінна дальність з двома пострілами. ❓ Перевір у грі. |
 | **Specter 1882** | 4 🔶 | 188 | Shotgun | Помповий. Хороша дальність, Iron Eye для ефективного прицілювання. ❓ Перевір у грі. |
-| **Terminus** | 4 🔶 | 238 | Shotgun | Lever-action дробовик. З Levering → напівавтомат. ❓ Перевір у грі. |
-| **Winfield 1893 Slate** | 4 🔶 | 333 | Shotgun | Сучасний помповий. Швидший за Specter. З Slugs — страшна сила. ❓ Перевір у грі. |
+| **Terminus** | 4 🔶 | 168 | Shotgun | Lever-action дробовик. З Levering → напівавтомат. ❓ Перевір у грі. |
+| **Winfield 1893 Slate** | 4 🔶 | 313 | Shotgun | Сучасний помповий. Швидший за Specter. З Slugs — страшна сила. ❓ Перевір у грі. |
 | **Crown & King Auto-5** | 4 🔶 | 600 | Shotgun | Напівавтомат, 5 пострілів без пауз. Сильна віддача. ❓ Перевір у грі. |
 | **Hunting Bow** | 4 ❓ | 57 | Special | Безшумний лук. Нескінченний натяг. Раніше Medium Slot → може бути Size 3 або 4. ⚠️ Frag Arrows тепер дефіцит. **Перевір у грі!** |
 
@@ -131,6 +131,51 @@
 | **Auto-5**                  | 5 ✅ | 600  | buckshot        | Також відомий як Crown and King, Краун, автоматичний шотган                                                                                     |
 
 ---
+
+## 🔧 Зміни після 2.8 (довідка)
+
+### Update 2.8.1 (1 липня 2026)
+**Запас набоїв (reserve), повнорозмірні дробовики збільшено (щоб вони були сильнішими за обрізи):**
+- Auto-5: Basic 6→8, Flechette 6→8, Slugs 4→5, Penny Shot 9→12
+- Rival 78 та Homestead 78: Basic/Flechette/Dragon Breath 8→12, Slugs 5→8, Penny Shot 12→18
+- Romero 77 Alamo: Basic/Dragon Breath 5→12, Slugs 3→8, Penny Shot 8→18, Starshell 3→8
+- Slate: Basic/Dragon Breath 6→12, Slugs 4→8, Penny Shot 9→18
+- Specter 1882: Basic/Flechette/Dragon Breath 10→12, Slugs 6→8, Penny Shot 15→18
+- Terminus: Basic/Flechette/Dragon Breath 8→12, Slugs 5→8, Penny Shot 12→18
+
+**Обрізи (Shorty) тепер Size 2, тому запас зменшено:** Rival 78 Shorty, Specter 1882 Shorty, Terminus Shorty — Basic/Flechette/Dragon Breath 4, Slugs 3, Penny Shot 6. Romero 77 Shorty — Basic/Dragon Breath 2×2, Slugs 1×2, Penny Shot 3×2, Starshell 1×2.
+
+**Ціни:** Terminus 238→168, Terminus Shorty 218→148, Slate 333→313, Slate Riposte 343→323, Rival 78 150→170, Rival 78 Trauma 160→180, Rival 78 Shorty 125→145, Rival 78 Mace 135→155.
+
+**Інше:**
+- Springfield 1866: шкода 132→139 (High Velocity 126→132, Explosive 123→125). Springfield 1866 Shorty: 130→135 (HV 123→128, Explosive 123→125). Задуманий як дешева Size 4 зброя.
+- Berthier 1892: шкода 132→128 (Spitzer 113→109) — підрізано, бо став сильним 3-slot варіантом.
+- Nitro Express: без випадкового відхилення на великих дистанціях при стрільбі з прицілу.
+- Mako 1895: запас Basic/FMJ/Explosive 8→10.
+- Виправлено експлойт з 9-м предметом у Tools/Consumables (тепер 8).
+
+### Update 2.9 «Blood Testament» (вересень 2026) — за агрегатором патчноутів (whatsnew.fyi), повний текст не звірено
+- Slugs для Romero 77, Drilling, LeMat та Haymaker: 65→40 Hunt Dollars.
+- Throwing Spear 80→145, Throwing Axes 50→80, Tool Box 70→25, Medical Pack 35→15.
+- Custom Loadouts тепер коштують і Hunt Dollars, і Upgrade Points.
+
+### Maxim 1895 (світова зброя, Road to Hell)
+- Лише на Stronghold, по одному на локацію. Не можна взяти в інвентар чи винести — лишається на карті.
+- Стрільба від стегна, великий розкид (приціл трохи зменшує). 50 запальних (incendiary) набоїв, поповнення неможливе.
+- Сповільнює мисливця на 25%. Може перегрітися при довгій стрільбі — тоді заклинює, треба усунути вручну.
+
+---
+
+### Long Derringer (інструмент, Update 2.9.1, жовтень 2026)
+
+> Джерела: huntshowdown.wiki.gg, патчноути Blood Testament Chapter 2, Rexnor. Це **Tool**, а не зброя: займає слот інструмента, а не Weapon Capacity.
+
+- **Отримання:** нагорода за Stage V (останній етап) спільнотної події All Hallows' Cleave. Спершу розблоковується для всіх, коли спільнота досягає етапу.
+- **Тип:** однозарядний пістолет-інструмент на **Long Ammo**. Заряджений 1 патрон + 2 в запасі.
+- **Ціна:** 100 Hunt Dollars за вікі (один агрегатор вказує 110, тож цифра неточна).
+- **Характеристики:** шкода 116 (на деяких сайтах 117), швидкість кулі 250 м/с, drop range 40 м, перезарядка 4,9 с. Crytek описує його як високу шкоду зі сповільненою кулею, що швидко падає, найточніший на короткій і середній дистанції.
+- **Особливості:** 116 шкоди не вбиває мисливця зі 125 HP одним пострілом у тіло; потрібна голова або другий постріл. Long Ammo пробиває метал, тож він може добивати ціль за укриттям і не займає слот зброї.
+- **Родина:** третій кишеньковий пістолет після Quad Derringer (74 шкоди, 4 патрони, перезарядка 3,6 с) і Derringer Pennyshot (ціна 100 після 2.9).
 
 ## 📊 Комбінації без / з Quartermaster
 

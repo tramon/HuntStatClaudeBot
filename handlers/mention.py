@@ -1,39 +1,40 @@
 """
 Central message router.
 
-Group chat: acts only when bot is @mentioned.
+Group chat: acts when the bot is @mentioned OR when someone replies to one of its messages.
 Private chat: acts on every message (if chat is in ALLOWED_CHAT_IDS).
 
 Routes:
-  stats keywords  -> show stats directly
-  mention alone   -> show menu buttons
-  anything else   -> ask Claude
+  short stats request -> show stats directly
+  mention alone       -> show menu buttons
+  anything else       -> ask Claude (which can call the stats tool for detailed questions)
 """
 
 import logging
+import re
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 import config
-from handlers.claude_agent import handle_claude
+from handlers.claude_agent import create_message, handle_claude
 from handlers.stats import handle_stats
 from utils.history import save_message
+from utils.telegram_text import safe_reply
 
 logger = logging.getLogger(__name__)
 
-_STATS_KEYWORDS = {
-    "stats", "stat", "statistics", "score", "scores", "result", "results",
-    "winrate", "wins", "missions",
-    "\u0441\u0442\u0430\u0442", "\u0441\u0442\u0430\u0442\u0430",
-    "\u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430",
-    "\u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0443",
-    "\u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442",
-    "\u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u0438",
-    "\u0440\u0430\u0445\u0443\u043d\u043e\u043a",
-    "\u043f\u0435\u0440\u0435\u043c\u043e\u0433\u0438",
-    "\u0432\u0456\u043d\u0440\u0435\u0439\u0442",
+# Whole words that mean "show the stats".
+_STATS_WORDS = {
+    "stats", "stat", "score", "scores", "winrate", "wins", "missions",
+    "стат", "стата", "стату", "статс", "рахунок", "вінрейт",
 }
+# Word beginnings (statistics / статистика, результат(и), ...).
+_STATS_PREFIXES = ("statistic", "result", "статистик", "результат", "перемог")
+
+# Only short messages take the fast stats path; longer, nuanced questions go to Claude,
+# which has the get_hunt_stats tool.
+_STATS_MAX_WORDS = 6
 
 
 def _sender_name(update: Update) -> str:
@@ -42,8 +43,15 @@ def _sender_name(update: Update) -> str:
 
 
 def _has_stats_intent(text: str) -> bool:
-    lower = text.lower()
-    return any(kw in lower for kw in _STATS_KEYWORDS)
+    words = re.findall(r"[\w'’]+", text.lower())
+    if not words or len(words) > _STATS_MAX_WORDS:
+        return False
+    return any(w in _STATS_WORDS or w.startswith(_STATS_PREFIXES) for w in words)
+
+
+def _is_reply_to_bot(message, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    quoted = message.reply_to_message
+    return bool(quoted and quoted.from_user and quoted.from_user.id == context.bot.id)
 
 
 async def handle_mention(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -67,13 +75,13 @@ async def handle_mention(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             text=text,
         )
 
-    if not is_private:
-        bot_tag = f"@{config.BOT_USERNAME}"
-        if bot_tag.lower() not in text.lower():
-            return
+    bot_tag = f"@{config.BOT_USERNAME}".lower()
+    mentioned = bot_tag in text.lower()
 
-    bot_tag = f"@{config.BOT_USERNAME}"
-    clean = text.lower().replace(bot_tag.lower(), "").strip()
+    if not is_private and not mentioned and not _is_reply_to_bot(message, context):
+        return
+
+    clean = text.lower().replace(bot_tag, "").strip()
 
     if _has_stats_intent(clean):
         logger.info(f"Stats requested by {_sender_name(update)} in chat {chat_id}")
@@ -90,21 +98,19 @@ async def handle_mention(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         ])
         await context.bot.send_chat_action(chat_id=chat_id, action="typing")
         from system_prompt.builder import build_system_prompt
-        from handlers.claude_agent import _get_client
-        import config as _config
         sender = _sender_name(update)
         try:
-            resp = _get_client().messages.create(
-                model=_config.CLAUDE_MODEL,
-                max_tokens=120,
+            resp = await create_message(
+                model=config.CLAUDE_MODEL,
+                max_tokens=600,
                 system=build_system_prompt(chat_id=chat_id),
                 messages=[{"role": "user", "content": f"{sender} just @mentioned you with no message."}],
-                output_config={"effort": _config.CLAUDE_EFFORT},
+                output_config={"effort": config.CLAUDE_EFFORT},
             )
-            reply = resp.content[0].text.strip()
+            reply = resp.content[0].text.strip() or "?"
         except Exception:
             reply = "?"
-        await message.reply_text(reply, reply_markup=keyboard)
+        await safe_reply(message, reply, reply_markup=keyboard)
 
     else:
         logger.info(f"Claude invoked by {_sender_name(update)} in chat {chat_id}")

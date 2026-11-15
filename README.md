@@ -9,6 +9,9 @@ A private Telegram bot for a hunting game group. Logs session results to Google 
 - `/stats` — show aggregate stats from Google Sheets
 - `@HuntStatClaudeBot <question>` — ask Claude anything
 - `@HuntStatClaudeBot` — show menu buttons
+- Reply to any message of the bot — it answers without a new @mention, and sees the message you replied to
+- Claude can call tools: `get_hunt_stats` (real numbers from the Google Sheet) and `web_search` (fresh patch info, needs `TAVILY_API_KEY`)
+- Knowledge base in `knowledge/*.md` is injected by keywords from `knowledge/index.yaml` (add a keyword when you add a topic)
 
 ## Setup
 
@@ -64,3 +67,16 @@ The bot runs as a relay of ~5h45m GitHub Actions runs (`.github/workflows/bot.ym
 - `.github/workflows/watchdog.yml` (every ~30 min) starts the bot if no run is active, and re-enables
   itself so GitHub does not disable scheduled workflows after 60 days without commits.
 - Messages sent while the bot restarts are kept by Telegram and answered after start (`drop_pending_updates=False`).
+
+## Tests
+
+```
+pip install pytest
+python -m pytest tests -q
+```
+Offline tests (no Telegram / Anthropic / Google): formatting, stats-intent, knowledge routing, prompt blocks, tool loop, reply context.
+
+## Notes
+
+- `CLAUDE_MEMORY=true` stores history in `data/messages.json`. On GitHub Actions the disk is wiped on every run, so memory lasts only for the current ~6h run.
+- An empty GitHub secret is treated as "not set" (defaults are used).

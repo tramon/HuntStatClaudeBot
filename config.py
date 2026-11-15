@@ -3,12 +3,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _env(name: str, default: str = "") -> str:
+    """Env var with a fallback. An EMPTY value counts as unset: GitHub Actions passes
+    an empty string for a missing secret, and os.getenv would return it instead of the default."""
+    value = os.getenv(name)
+    return value.strip() if value and value.strip() else default
+
 # ── Telegram ───────────────────────────────────────────────────────────────
 
 BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
 
 # Bot username without the @ sign, lowercased for easy comparison
-BOT_USERNAME: str = os.getenv("BOT_USERNAME", "HuntStatClaudeBot").lower().lstrip("@")
+BOT_USERNAME: str = _env("BOT_USERNAME", "HuntStatClaudeBot").lower().lstrip("@")
 
 # ── Security ───────────────────────────────────────────────────────────────
 
@@ -27,20 +34,23 @@ OWNER_USER_ID: int = int(_owner_raw) if _owner_raw.lstrip("-").isdigit() else 0
 ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 
 # Claude model to use — override via CLAUDE_MODEL env variable
-CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
+CLAUDE_MODEL: str = _env("CLAUDE_MODEL", "claude-sonnet-4-6")
 
 # ── Claude behaviour ───────────────────────────────────────────────────────
 
+# Name the bot signs its own messages with in the saved chat history
+BOT_DISPLAY_NAME: str = _env("BOT_DISPLAY_NAME", "Прист")
+
 # Set to true to save chat messages and pass them to Claude as context (memory)
 # Set to false to have Claude answer only the current question with no history
-CLAUDE_MEMORY: bool = os.getenv("CLAUDE_MEMORY", "false").lower() == "true"
+CLAUDE_MEMORY: bool = _env("CLAUDE_MEMORY", "false").lower() == "true"
 
 # How many recent messages to pass to Claude when CLAUDE_MEMORY=true
-CONTEXT_MESSAGES: int = int(os.getenv("CONTEXT_MESSAGES", "15"))
+CONTEXT_MESSAGES: int = int(_env("CONTEXT_MESSAGES", "15"))
 
 # Effort level for Claude API: low / medium / high / max
 # high = default (same as not setting it); max = best quality, most tokens
-CLAUDE_EFFORT: str = os.getenv("CLAUDE_EFFORT", "high")
+CLAUDE_EFFORT: str = _env("CLAUDE_EFFORT", "high")
 
 # ── Search ────────────────────────────────────────────────────────────────
 
@@ -54,7 +64,7 @@ TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
 GOOGLE_SHEET_ID: str = os.getenv("GOOGLE_SHEET_ID", "")
 
 # Path to the service account JSON key file (local development)
-GOOGLE_CREDENTIALS_FILE: str = os.getenv("GOOGLE_CREDENTIALS_FILE", "huntstatbot.json")
+GOOGLE_CREDENTIALS_FILE: str = _env("GOOGLE_CREDENTIALS_FILE", "huntstatbot.json")
 
 # On Render/CI: put the entire JSON content in this env variable instead of a file
 GOOGLE_CREDENTIALS_JSON: str = os.getenv("GOOGLE_CREDENTIALS_JSON", "")

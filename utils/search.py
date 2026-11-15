@@ -11,6 +11,8 @@ import config
 
 logger = logging.getLogger(__name__)
 
+_MAX_CONTENT = 600  # chars kept per result -- enough for facts, cheap in tokens
+
 
 def web_search(query: str, max_results: int = 5) -> str:
     """Run a web search and return a plain-text summary of results.
@@ -28,16 +30,23 @@ def web_search(query: str, max_results: int = 5) -> str:
             query=query,
             max_results=max_results,
             search_depth="basic",
+            include_answer=True,
         )
         results = response.get("results", [])
         if not results:
             return "No results found."
 
         lines = []
+        answer = (response.get("answer") or "").strip()
+        if answer:
+            lines.append(f"Summary: {answer}")
+
         for r in results:
             title = r.get("title", "")
             url   = r.get("url", "")
             content = r.get("content", "").strip()
+            if len(content) > _MAX_CONTENT:
+                content = content[:_MAX_CONTENT] + "…"
             lines.append(f"**{title}**\n{url}\n{content}")
 
         return "\n\n".join(lines)

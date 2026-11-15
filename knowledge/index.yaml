@@ -71,6 +71,31 @@
     - авто-4
     - авто4
     - шотган
+    - slot
+    - slots
+    - size
+    - слот
+    - слоти
+    - сайз
+    - quartermaster
+    - квартирмейстер
+    - berthier
+    - бертьє
+    - maxim
+    - максим
+    - nitro
+    - cavalry
+    - mako
+    - derringer
+    - дерінджер
+    - деррінджер
+    - longshot
+    - лонгшот
+    - long shot
+    - pennyshot
+    - quad derringer
+    - tool
+    - інструмент
 
 
 - file: hunt_showdown_1896_compounds.md
@@ -142,3 +167,55 @@
     - npc
     - нпс
     - нпц
+    - boss
+    - bosses
+    - бос
+    - боси
+    - bloodskin
+    - siphon
+    - butcher
+    - spider
+    - assassin
+    - rotjaw
+    - hellborn
+    - caged
+    - стронгхолд
+    - клітк
+    - stronghold
+    - м'ясник
+    - павук
+    - вбивця
+
+- file: hunt_showdown_1896_tarot.md
+  keywords:
+    - tarot
+    - таро
+    - карта таро
+    - карти таро
+    - atlas
+    - атлас
+    - temperance
+    - темперанс
+    - empress
+    - імператриц
+    - chariot
+    - колісниц
+    - pathfinder
+    - high priestess
+    - жриц
+    - hanged man
+    - magician
+    - judgement
+    - the world
+    - the fool
+    - the tower
+    - the moon
+    - the sun
+    - the garden
+    - the devil
+    - cleave
+    - postal supply
+    - clockmaker
+    - sealed hoard
+    - scout tower
+    - derringer

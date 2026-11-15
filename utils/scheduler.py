@@ -10,8 +10,11 @@ by persona.builder.build_announcement_prompt.
 """
 
 import logging
+import random
+from datetime import datetime, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.base import BaseTrigger
 from apscheduler.triggers.cron import CronTrigger
 from telegram import Bot
 
@@ -21,6 +24,39 @@ logger = logging.getLogger(__name__)
 
 _TZ = "Europe/Kyiv"
 _MSG_TRUNCATE = 120  # max chars per history line
+
+
+class DateJitterTrigger(BaseTrigger):
+    """Cron trigger whose random delay is derived from the date, not from memory.
+
+    The bot runs in ~6-hour relays and its state is wiped on every restart. A normal
+    random jitter is re-rolled at each start, so a restart could skip today's
+    announcement or fire it twice. Here the offset of a given day is always the same
+    (seeded by salt + date), so the fire time of "today" is identical before and after
+    any restart: if it is still ahead it fires once, if it has passed it is not repeated.
+    """
+
+    def __init__(self, cron: CronTrigger, jitter: int, salt: str = ""):
+        self.cron = cron
+        self.jitter = max(int(jitter), 1)
+        self.salt = salt
+
+    def _fire_time(self, base: datetime) -> datetime:
+        rng = random.Random(f"{self.salt}-{base:%Y-%m-%d}")
+        return base + timedelta(seconds=rng.randrange(self.jitter))
+
+    def get_next_fire_time(self, previous_fire_time, now):
+        # A base cron time up to `jitter` seconds ago may still be waiting for its offset.
+        base = self.cron.get_next_fire_time(None, now - timedelta(seconds=self.jitter))
+        while base is not None:
+            fire = self._fire_time(base)
+            if fire > now and (previous_fire_time is None or fire > previous_fire_time):
+                return fire
+            base = self.cron.get_next_fire_time(base, base + timedelta(seconds=1))
+        return None
+
+    def __str__(self):
+        return f"date-jitter[{self.jitter}s, {self.cron}]"
 
 
 def _format_history(messages: list[dict]) -> str:
@@ -37,12 +73,12 @@ def _format_history(messages: list[dict]) -> str:
 
 async def _generate_text(prompt: str, history_text: str = "") -> str | None:
     try:
-        from handlers.claude_agent import _get_client
+        from handlers.claude_agent import create_message
         from system_prompt.builder import build_announcement_prompt
         system = build_announcement_prompt(history_text)
-        response = _get_client().messages.create(
+        response = await create_message(
             model=config.CLAUDE_MODEL,
-            max_tokens=200,
+            max_tokens=800,
             system=system,
             messages=[{"role": "user", "content": prompt}],
             output_config={"effort": config.CLAUDE_EFFORT},
@@ -124,8 +160,10 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
             minute, hour, day, month, dow = cron.split()
             trigger = CronTrigger(
                 minute=minute, hour=hour, day=day, month=month,
-                day_of_week=dow, timezone=_TZ, jitter=jitter,
+                day_of_week=dow, timezone=_TZ,
             )
+            if jitter:
+                trigger = DateJitterTrigger(trigger, jitter, salt=f"announcement-{idx}")
         except Exception as e:
             logger.error(f"Announcement #{idx} bad cron {cron!r}: {e} -- skipped")
             continue
