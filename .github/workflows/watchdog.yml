@@ -1,0 +1,35 @@
+name: Watchdog
+
+# Страховка: якщо ланцюжок запусків бота обірвався (збій GitHub, ручне
+# скасування, помилка запуску), піднімає бота за ≤ ~30 хв.
+# Заодно щоразу "перевмикає" сам себе, щоб GitHub не вимкнув scheduled
+# workflow через 60 днів без комітів у публічному репозиторії.
+on:
+  schedule:
+    - cron: "11,41 * * * *"   # не на :00 — там у GitHub найбільші затримки
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  ensure-bot-running:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Keep this schedule alive
+        run: gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/watchdog.yml/enable" || true
+
+      - name: Start bot if no run is active
+        run: |
+          active=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow bot.yml --limit 20 \
+            --json status \
+            --jq '[.[] | select(.status=="in_progress" or .status=="queued" or .status=="waiting" or .status=="pending" or .status=="requested")] | length')
+          echo "Active bot runs: $active"
+          if [ "$active" = "0" ]; then
+            echo "No active run -> starting one"
+            gh workflow run bot.yml --repo "$GITHUB_REPOSITORY" --ref "${{ github.event.repository.default_branch }}" -f handover=true
+          fi

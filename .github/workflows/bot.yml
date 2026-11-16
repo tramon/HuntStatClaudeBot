@@ -1,15 +1,35 @@
 name: HuntStatClaudeBot
 
+# Бот крутиться як "естафета" 6-годинних запусків:
+#   • кожен запуск працює ~5h45m, сам перезапускає bot.py при падінні
+#     (scripts/run_bot.sh), а наприкінці сам запускає наступний запуск;
+#   • наступний стає в чергу й стартує, щойно поточний завершився — без дірок
+#     і без залежності від cron (cron у GitHub запізнюється на години);
+#   • якщо ланцюжок все ж обірвався — його піднімає watchdog.yml.
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: "0 */6 * * *"  # запускається кожні 6 годин
-  workflow_dispatch:         # дозволяє ручний запуск з GitHub UI
+    paths-ignore:
+      - "README.md"
+      - "LICENSE"
+      - ".gitignore"
+  workflow_dispatch:
+    inputs:
+      handover:
+        description: "Службове: автоматична передача естафети (вручну не вмикати)"
+        type: boolean
+        default: false
 
 concurrency:
   group: bot-runner
-  cancel-in-progress: true
+  # push і ручний запуск = свідомий перезапуск -> замінюють працюючий бот одразу.
+  # handover (від попереднього запуску або watchdog) -> стає в чергу й чекає,
+  # поки поточний завершиться, нічого не обриваючи.
+  cancel-in-progress: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.handover != true) }}
+
+permissions:
+  contents: read
+  actions: write   # потрібно, щоб запустити наступний запуск
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -17,6 +37,7 @@ env:
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+    timeout-minutes: 355   # жорстка межа GitHub — 360
 
     steps:
       - name: Checkout code
@@ -31,9 +52,10 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run bot
-        run: timeout 21300 python bot.py || true  # 5h55m = 21300s, then stops gracefully
+      - name: Run bot (з автоперезапуском)
+        run: bash scripts/run_bot.sh
         env:
+          BOT_MAX_SECONDS: "20700"   # 5h45m, далі передаємо естафету
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BOT_USERNAME: ${{ secrets.BOT_USERNAME }}
@@ -46,3 +68,11 @@ jobs:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           CLAUDE_EFFORT: ${{ secrets.CLAUDE_EFFORT }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+
+      # Лише при нормальному завершенні (не при скасуванні через push/ручний
+      # перезапуск і не при помилці конфігурації).
+      - name: Hand over to next run
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run bot.yml --repo "$GITHUB_REPOSITORY" --ref "${{ github.ref_name }}" -f handover=true

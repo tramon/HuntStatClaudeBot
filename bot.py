@@ -4,6 +4,7 @@ Entry point -- registers handlers and starts polling.
 
 import asyncio
 import logging
+import os
 import sys
 
 from telegram import BotCommand
@@ -30,6 +31,36 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+_HEARTBEAT_EVERY = 120   # seconds between checks
+_HEARTBEAT_MAX_FAILS = 5  # ~10 minutes of failed checks in a row
+
+
+async def _heartbeat(app: Application) -> None:
+    """Exit with a non-zero code when the bot is alive but not working (hung, or lost
+    connection to Telegram for good). scripts/run_bot.sh then restarts it.
+
+    A short network blip is retried by python-telegram-bot itself; only a long
+    uninterrupted failure ends the process.
+    """
+    fails = 0
+    while True:
+        await asyncio.sleep(_HEARTBEAT_EVERY)
+        try:
+            await asyncio.wait_for(app.bot.get_me(), timeout=30)
+            healthy = bool(app.updater and app.updater.running)
+        except Exception as e:
+            logger.warning(f"Heartbeat: Telegram check failed ({e!r})")
+            healthy = False
+        if healthy:
+            fails = 0
+            continue
+        fails += 1
+        logger.warning(f"Heartbeat: unhealthy {fails}/{_HEARTBEAT_MAX_FAILS}")
+        if fails >= _HEARTBEAT_MAX_FAILS:
+            logger.error("Heartbeat: bot is not responding -- exiting for restart")
+            os._exit(1)
+
+
 async def post_init(app: Application) -> None:
     """Register command menu and start scheduler (runs inside the event loop)."""
     try:
@@ -42,6 +73,8 @@ async def post_init(app: Application) -> None:
         logger.info("Bot command menu registered")
     except Exception as e:  # a failed menu update must not stop the bot starting
         logger.warning(f"Could not register command menu: {e}")
+
+    app.bot_data["heartbeat"] = asyncio.create_task(_heartbeat(app))  # keep a reference
 
     scheduler = setup_scheduler(app.bot)
     if scheduler.get_jobs():

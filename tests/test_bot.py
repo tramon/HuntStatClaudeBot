@@ -239,3 +239,47 @@ def test_persona_has_no_advice_giving():
     low = SYSTEM_PROMPT.lower()
     assert "never give advice" in low and "free to share opinions, builds, and advice" not in low
     assert "verdict" not in low
+
+
+# ---------- bot heartbeat ----------
+def test_heartbeat_exits_after_repeated_failures(monkeypatch):
+    import bot as botmod
+
+    class DeadBot:
+        async def get_me(self):
+            raise RuntimeError("no network")
+
+    app = types.SimpleNamespace(bot=DeadBot(), updater=types.SimpleNamespace(running=True))
+    monkeypatch.setattr(botmod, "_HEARTBEAT_EVERY", 0)
+    monkeypatch.setattr(botmod, "_HEARTBEAT_MAX_FAILS", 3)
+    codes = []
+
+    def fake_exit(code):
+        codes.append(code)
+        raise SystemExit(code)
+
+    monkeypatch.setattr(botmod.os, "_exit", fake_exit)
+    try:
+        asyncio.run(botmod._heartbeat(app))
+    except SystemExit:
+        pass
+    assert codes == [1]
+
+
+def test_heartbeat_stays_quiet_when_healthy(monkeypatch):
+    import bot as botmod
+
+    class OkBot:
+        calls = 0
+        async def get_me(self):
+            OkBot.calls += 1
+            if OkBot.calls >= 4:
+                raise asyncio.CancelledError()
+
+    app = types.SimpleNamespace(bot=OkBot(), updater=types.SimpleNamespace(running=True))
+    monkeypatch.setattr(botmod, "_HEARTBEAT_EVERY", 0)
+    monkeypatch.setattr(botmod.os, "_exit", lambda c: (_ for _ in ()).throw(AssertionError("must not exit")))
+    try:
+        asyncio.run(botmod._heartbeat(app))
+    except (asyncio.CancelledError, BaseException) as e:
+        assert not isinstance(e, AssertionError)
